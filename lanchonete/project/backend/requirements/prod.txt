@@ -1,0 +1,5 @@
+# Inclui tudo do base
+-r base.txt
+
+# ── Monitoramento (opcional em produção) ─────────────────────
+# sentry-sdk[fastapi]==2.5.0

@@ -25,3 +25,67 @@ class UserList(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+#---# 
+
+
+class CategoryCreate(BaseModel):
+    name: str
+
+
+class CategoryResponse(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+
+
+class ProductCreate(BaseModel):
+    name: str
+    description: str | None = None
+    price: float
+    cost: float
+    stock: int
+    category_id: int
+
+
+class ProductResponse(BaseModel):
+    id: int
+    name: str
+    description: str | None
+    price: float
+    cost: float
+    stock: int
+    active: bool
+    image_url: str | None
+    category_id: int
+    profit: float
+
+    class Config:
+        from_attributes = True
+
+class ProductList(BaseModel):
+    products: list[ProductResponse]
+
+
+class ComboItem(BaseModel):
+    product_id: int
+    quantity: int
+
+
+class ComboCreate(BaseModel):
+    name: str
+    description: str
+    price: float
+    items: list[ComboItem]
+
+
+class ComboResponse(BaseModel):
+    id: int
+    name: str
+    description: str
+    price: float
+
+    class Config:
+        from_attributes = True
