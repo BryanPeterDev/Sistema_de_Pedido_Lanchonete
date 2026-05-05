@@ -1,9 +1,8 @@
 "use client";
 import { Truck, CheckCircle2, MapPin, Phone, User, Package } from "lucide-react";
-import { useDeliveries, useClaimDelivery, useUpdateDeliveryStatus } from "@/hooks/useDeliveries";
-import { Spinner, Button } from "@/components/ui";
+import { useDeliveries } from "@/hooks/useDeliveries";
+import { Spinner } from "@/components/ui";
 import { formatDate, formatCurrency } from "@/lib/utils";
-import toast from "react-hot-toast";
 
 const STATUS_COLOR: Record<string, string> = {
   pendente:          "bg-amber-100 text-amber-800",
@@ -18,13 +17,11 @@ const STATUS_LABEL: Record<string, string> = {
   cancelado:         "Cancelado",
 };
 
-export default function AdminEntregasPage() {
+export default function AtendenteEntregasPage() {
   const { data: deliveries, isLoading } = useDeliveries();
-  const claimMut = useClaimDelivery();
-  const updateMut = useUpdateDeliveryStatus();
 
   return (
-    <div className="space-y-6">
+    <div className="p-8 space-y-6">
       <div>
         <h1 className="font-display text-3xl text-surface-900">Entregas</h1>
         <p className="text-sm text-surface-200 font-body mt-1">Visão de todas as entregas · Atualiza a cada 10s</p>

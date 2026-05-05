@@ -86,11 +86,11 @@ class OrderService:
                 status_code=status.HTTP_403_FORBIDDEN, detail="Sem permissão para editar pedidos"
             )
 
-        # Só pode editar se não estiver entregue ou cancelado (opcional, mas recomendado)
-        if order.status in [OrderStatus.entregue, OrderStatus.cancelado]:
+        # Pedidos finalizados podem ser corrigidos; cancelados/extornados ficam fechados.
+        if order.status == OrderStatus.cancelado:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Não é possível editar pedidos finalizados",
+                detail="Não é possível editar pedidos cancelados",
             )
 
         # Apaga todos os itens antigos (cascade delete no SQLAlchemy para order_items resolve se configurado, mas vamos apagar manualmente por segurança)
@@ -187,7 +187,10 @@ class OrderService:
                 detail="Sem permissão para alterar status de pedido",
             )
 
-        if not order.can_transition_to(payload.status):
+        is_refund = payload.status == OrderStatus.cancelado and order.status != OrderStatus.cancelado
+        can_refund = actor_role in [UserRole.admin, UserRole.atendente]
+
+        if not order.can_transition_to(payload.status) and not (is_refund and can_refund):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"Transição inválida: {order.status} → {payload.status}. "

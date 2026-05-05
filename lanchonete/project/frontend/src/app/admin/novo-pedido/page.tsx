@@ -26,6 +26,7 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: "dinheiro", label: "💵 Dinheiro" },
   { value: "pix",     label: "📱 Pix" },
   { value: "cartao",  label: "💳 Cartão" },
+  { value: "nao_pago", label: "❌ Não Pago" },
 ];
 
 export default function AdminNovoPedidoPageWrapper() {
@@ -68,7 +69,11 @@ function AdminNovoPedidoPage() {
       setNotes(orderToEdit.notes || "");
       
       const newCart = orderToEdit.items.map(item => ({
-        product: item.product,
+        product: {
+          ...item.product,
+          price: item.unit_price,
+          is_promotional: false // Prevents using product.promotional_price which might be missing
+        },
         quantity: item.quantity,
         notes: item.notes || undefined,
         showNotes: !!item.notes
@@ -115,8 +120,8 @@ function AdminNovoPedidoPage() {
   const total = cart.reduce((sum, i) => {
     const activePrice = i.product.is_promotional && i.product.promotional_price 
       ? Number(i.product.promotional_price) 
-      : Number(i.product.price);
-    return sum + activePrice * i.quantity;
+      : Number(i.product.price || 0);
+    return sum + (isNaN(activePrice) ? 0 : activePrice) * i.quantity;
   }, 0);
 
   async function handleSubmit() {

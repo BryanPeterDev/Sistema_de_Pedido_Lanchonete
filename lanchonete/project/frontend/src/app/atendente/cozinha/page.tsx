@@ -1,12 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChefHat, Clock, Flame, CheckCircle2, AlertCircle, GripVertical } from "lucide-react";
+import { ChefHat, Clock, Flame, CheckCircle2, AlertCircle, GripVertical, Pencil } from "lucide-react";
 import api from "@/lib/api";
 import { Spinner } from "@/components/ui";
 import { formatDate, ORDER_TYPE_LABEL, cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import toast from "react-hot-toast";
+import Link from "next/link";
 import type { Order, OrderStatus } from "@/types";
 
 const COLUMNS: { status: OrderStatus; label: string; icon: React.ReactNode; color: string; bgColor: string }[] = [
@@ -35,7 +36,7 @@ const COLUMNS: { status: OrderStatus; label: string; icon: React.ReactNode; colo
 
 const REORDERABLE_STATUS: OrderStatus = "preparando";
 
-export default function CozinhaPage() {
+export default function AtendenteCozinhaPage() {
   const qc = useQueryClient();
   const { user } = useAuth();
   const [orderIdsByStatus, setOrderIdsByStatus] = useState<Partial<Record<OrderStatus, number[]>>>({});
@@ -123,14 +124,14 @@ export default function CozinhaPage() {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-surface-950">
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-4 border-b border-surface-800/50 sm:px-6">
         <div className="flex items-center gap-3">
           <ChefHat size={28} className="text-brand-500" />
           <div>
-            <h1 className="font-display text-xl text-white">Cozinha</h1>
-            <p className="text-xs text-surface-200 font-body">Tempo real (WebSocket) · {user?.name}</p>
+            <h1 className="font-display text-xl text-white">Cozinha (Atendente)</h1>
+            <p className="text-xs text-surface-200 font-body">Visão da cozinha · {user?.name}</p>
           </div>
         </div>
       </header>
@@ -199,19 +200,28 @@ export default function CozinhaPage() {
                           setDragOverOrderId(null);
                         }}
                         className={cn(
-                          "bg-surface-800/80 backdrop-blur rounded-xl p-4 space-y-3 animate-fade-up transition-colors border",
+                          "bg-surface-800/80 backdrop-blur rounded-xl p-4 space-y-3 animate-fade-up transition-colors border relative group",
                           order.status === REORDERABLE_STATUS && "cursor-grab active:cursor-grabbing",
                           order.is_edited ? "border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.15)]" : "border-surface-700/50 hover:border-surface-600",
                           draggedOrder?.id === order.id && "opacity-50",
                           dragOverOrderId === order.id && draggedOrder?.status === order.status && "ring-2 ring-brand-400"
                         )}
                       >
-                        <div className="flex items-center justify-between">
+                        {/* Edit Button for Attendant */}
+                        <Link
+                          href={`/atendente?edit=${order.id}`}
+                          className="absolute top-3 right-3 p-1.5 rounded-lg bg-surface-700/50 text-surface-300 opacity-0 group-hover:opacity-100 transition-all hover:bg-brand-500 hover:text-white"
+                          title="Editar Pedido"
+                        >
+                          <Pencil size={14} />
+                        </Link>
+
+                        <div className="flex items-center justify-between pr-8">
                           <div className="flex items-center gap-2">
                             {order.status === REORDERABLE_STATUS && <GripVertical size={16} className="text-surface-400" />}
                             <span className="font-body font-bold text-white text-lg">#{order.id}</span>
                           </div>
-                          <span className="text-xs font-body text-surface-200">{formatDate(order.created_at)}</span>
+                          <span className="text-[10px] font-body text-surface-400">{formatDate(order.created_at)}</span>
                         </div>
 
                         <div className="text-xs font-body text-surface-200">

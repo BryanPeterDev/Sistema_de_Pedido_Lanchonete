@@ -12,7 +12,7 @@ export type OrderStatus =
 
 export type OrderType = "delivery" | "retirada" | "local";
 
-export type PaymentMethod = "pix" | "cartao" | "dinheiro";
+export type PaymentMethod = "pix" | "cartao" | "dinheiro" | "nao_pago";
 
 export type DeliveryStatus = "pendente" | "saiu_para_entrega" | "entregue";
 

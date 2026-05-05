@@ -48,3 +48,10 @@ export const ORDER_TYPE_COLOR: Record<OrderType, string> = {
   retirada:  "bg-cyan-100 text-cyan-800",
   local:     "bg-orange-100 text-orange-800",
 };
+
+export const PAYMENT_METHOD_LABEL: Record<string, string> = {
+  pix: "📱 Pix",
+  cartao: "💳 Cartão",
+  dinheiro: "💵 Dinheiro",
+  nao_pago: "❌ Não Pago",
+};

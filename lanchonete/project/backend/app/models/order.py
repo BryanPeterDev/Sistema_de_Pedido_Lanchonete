@@ -29,11 +29,12 @@ VALID_TRANSITIONS: dict[OrderStatus, list[OrderStatus]] = {
     OrderStatus.cancelado: [],
 }
 
-
+#BOTOES PARA PAGAMENTO NA TELA DE PEDIDOS
 class PaymentMethod(str, enum.Enum):
     pix = "pix"
     cartao = "cartao"
     dinheiro = "dinheiro"
+    nao_pago = "nao_pago"
 
 
 class OrderType(str, enum.Enum):
