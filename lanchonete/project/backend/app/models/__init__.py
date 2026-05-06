@@ -6,11 +6,12 @@ from app.models.order import (
     VALID_TRANSITIONS,
     Order,
     OrderItem,
+    OrderItemOption,
     OrderStatus,
     OrderType,
     PaymentMethod,
 )
-from app.models.product import Product
+from app.models.product import OptionType, Product, ProductOptionGroup, ProductOptionItem
 from app.models.stock_log import StockLog, StockOperation
 from app.models.user import User, UserRole
 
@@ -19,8 +20,12 @@ __all__ = [
     "UserRole",
     "Category",
     "Product",
+    "ProductOptionGroup",
+    "ProductOptionItem",
+    "OptionType",
     "Order",
     "OrderItem",
+    "OrderItemOption",
     "OrderStatus",
     "OrderType",
     "PaymentMethod",

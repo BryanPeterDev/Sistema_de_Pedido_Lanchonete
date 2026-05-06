@@ -1,7 +1,16 @@
+from datetime import UTC, datetime
 from decimal import Decimal
 
-from app.models.delivery import Delivery
-from app.models.order import VALID_TRANSITIONS, Order, OrderItem, OrderStatus, OrderType
+from app.models.delivery import Delivery, DeliveryStatus
+from app.models.order import (
+    VALID_TRANSITIONS,
+    Order,
+    OrderItem,
+    OrderItemOption,
+    OrderStatus,
+    OrderType,
+)
+from app.models.product import ProductOptionItem
 from app.models.user import UserRole
 from app.schemas.order import AttendantOrderCreate, OrderStatusUpdate, OrderUpdate
 from app.services.product_service import ProductService
@@ -23,19 +32,45 @@ class OrderService:
 
             active_price = (
                 product.promotional_price
-                if product.is_promotional and product.promotional_price is not None
+                if ProductService.is_promotion_active(product)
                 else product.price
             )
-            subtotal = active_price * item_in.quantity
+
+            option_price_adjustment = Decimal("0")
+            options_to_add = []
+            if hasattr(item_in, "selected_options") and item_in.selected_options:
+                for opt_in in item_in.selected_options:
+                    opt_item = db.get(ProductOptionItem, opt_in.option_item_id)
+                    if opt_item:
+                        active_opt_price = (
+                            opt_item.promotional_price
+                            if ProductService.is_promotion_active(opt_item)
+                            else opt_item.price_adjustment
+                        )
+                        option_price_adjustment += active_opt_price * opt_in.quantity
+                        options_to_add.append(
+                            OrderItemOption(
+                                option_item_id=opt_item.id,
+                                name=opt_item.name,
+                                price_adjustment=active_opt_price,
+                                quantity=opt_in.quantity,
+                            )
+                        )
+
+            unit_price_with_options = active_price + option_price_adjustment
+            subtotal = unit_price_with_options * item_in.quantity
             total += subtotal
-            items.append(
-                OrderItem(
-                    product_id=product.id,
-                    quantity=item_in.quantity,
-                    unit_price=active_price,
-                    notes=item_in.notes,
-                )
+
+            new_item = OrderItem(
+                product_id=product.id,
+                quantity=item_in.quantity,
+                unit_price=unit_price_with_options,
+                notes=item_in.notes,
             )
+            if options_to_add:
+                new_item.selected_options = options_to_add
+
+            items.append(new_item)
 
         order = Order(
             created_by_id=created_by_id,
@@ -103,20 +138,46 @@ class OrderService:
             product = ProductService.get_or_404(db, item_in.product_id)
             active_price = (
                 product.promotional_price
-                if product.is_promotional and product.promotional_price is not None
+                if ProductService.is_promotion_active(product)
                 else product.price
             )
-            subtotal = active_price * item_in.quantity
+
+            option_price_adjustment = Decimal("0")
+            options_to_add = []
+            if hasattr(item_in, "selected_options") and item_in.selected_options:
+                for opt_in in item_in.selected_options:
+                    opt_item = db.get(ProductOptionItem, opt_in.option_item_id)
+                    if opt_item:
+                        active_opt_price = (
+                            opt_item.promotional_price
+                            if ProductService.is_promotion_active(opt_item)
+                            else opt_item.price_adjustment
+                        )
+                        option_price_adjustment += active_opt_price * opt_in.quantity
+                        options_to_add.append(
+                            OrderItemOption(
+                                option_item_id=opt_item.id,
+                                name=opt_item.name,
+                                price_adjustment=active_opt_price,
+                                quantity=opt_in.quantity,
+                            )
+                        )
+
+            unit_price_with_options = active_price + option_price_adjustment
+            subtotal = unit_price_with_options * item_in.quantity
             total += subtotal
-            items.append(
-                OrderItem(
-                    order_id=order.id,
-                    product_id=product.id,
-                    quantity=item_in.quantity,
-                    unit_price=active_price,
-                    notes=item_in.notes,
-                )
+
+            new_item = OrderItem(
+                order_id=order.id,
+                product_id=product.id,
+                quantity=item_in.quantity,
+                unit_price=unit_price_with_options,
+                notes=item_in.notes,
             )
+            if options_to_add:
+                new_item.selected_options = options_to_add
+
+            items.append(new_item)
 
         # Atualiza o pedido
         order.customer_name = payload.customer_name
@@ -187,10 +248,22 @@ class OrderService:
                 detail="Sem permissão para alterar status de pedido",
             )
 
+
+        if not order.can_transition_to(payload.status):
+
+        is_refund = (
+            payload.status == OrderStatus.cancelado and order.status != OrderStatus.cancelado
+        )
+        can_refund = actor_role in [UserRole.admin, UserRole.atendente]
+
+        if not order.can_transition_to(payload.status) and not (is_refund and can_refund):
+
+
         is_refund = payload.status == OrderStatus.cancelado and order.status != OrderStatus.cancelado
         can_refund = actor_role in [UserRole.admin, UserRole.atendente]
 
         if not order.can_transition_to(payload.status) and not (is_refund and can_refund):
+
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"Transição inválida: {order.status} → {payload.status}. "
@@ -198,6 +271,17 @@ class OrderService:
             )
 
         order.status = payload.status
+
+        # Sincroniza com a entrega se houver
+        if order.delivery:
+            if payload.status == OrderStatus.a_caminho:
+                order.delivery.status = DeliveryStatus.saiu_para_entrega
+            elif payload.status == OrderStatus.entregue:
+                order.delivery.status = DeliveryStatus.entregue
+                if not order.delivery.delivered_at:
+                    order.delivery.delivered_at = datetime.now(UTC)
+            elif payload.status == OrderStatus.pronto:
+                order.delivery.status = DeliveryStatus.pendente
 
         # Se cancelou, cancela a entrega (se houver)
         if payload.status == OrderStatus.cancelado:

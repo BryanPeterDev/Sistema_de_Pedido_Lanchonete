@@ -239,6 +239,13 @@ export default function CozinhaPage() {
                                 </span>
                                 <span className="truncate">{item.product.name}</span>
                               </div>
+                              {item.selected_options && item.selected_options.length > 0 && (
+                                <div className="text-[11px] font-body text-surface-400 ml-9 leading-tight">
+                                  {item.selected_options.map((opt) => (
+                                    <div key={opt.option_item_id}>+ {opt.name}</div>
+                                  ))}
+                                </div>
+                              )}
                               {item.notes && (
                                 <p className="text-[10px] font-body text-amber-300 ml-9 italic leading-tight">
                                   Obs: {item.notes}

@@ -18,6 +18,8 @@ export type DeliveryStatus = "pendente" | "saiu_para_entrega" | "entregue";
 
 export type StockOperation = "entrada" | "saida" | "ajuste" | "cancelamento";
 
+export type OptionType = "single" | "multiple";
+
 // ── Models ────────────────────────────────────────────────────────────────────
 
 export interface User {
@@ -38,6 +40,27 @@ export interface Category {
   created_at: string;
 }
 
+export interface ProductOptionItem {
+  id: number;
+  name: string;
+  price_adjustment: number;
+  target_group_id?: number | null;
+  target_max_value?: number | null;
+  is_promotional?: boolean;
+  promotional_price?: number | null;
+  promotion_active_days?: string | null;
+}
+
+export interface ProductOptionGroup {
+  id: number;
+  name: string;
+  option_type: OptionType;
+  is_required: boolean;
+  min_selections: number;
+  max_selections: number;
+  options: ProductOptionItem[];
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -48,11 +71,21 @@ export interface Product {
   is_visible?: boolean;
   is_promotional?: boolean;
   promotional_price?: number | null;
+  promotion_active_days?: string | null;
   stock_quantity?: number;
   stock_alert_threshold: number;
   is_low_stock: boolean;
   category: Category;
+  option_groups: ProductOptionGroup[];
   created_at: string;
+}
+
+export interface OrderItemOption {
+  id: number;
+  option_item_id: number;
+  name: string;
+  price_adjustment: string;
+  quantity: number;
 }
 
 export interface OrderItem {
@@ -63,6 +96,7 @@ export interface OrderItem {
   unit_price: string;
   notes: string | null;
   subtotal: string;
+  selected_options: OrderItemOption[];
 }
 
 export interface Order {
@@ -141,7 +175,12 @@ export interface TokenResponse {
 // ── Attendant Order (criação de pedido) ───────────────────────────────────────
 
 export interface AttendantOrderPayload {
-  items: { product_id: number; quantity: number; notes?: string }[];
+  items: { 
+    product_id: number; 
+    quantity: number; 
+    notes?: string;
+    selected_options?: { option_item_id: number }[];
+  }[];
   customer_name: string;
   order_type: OrderType;
   payment_method: PaymentMethod;
