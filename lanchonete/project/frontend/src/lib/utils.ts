@@ -48,3 +48,31 @@ export const ORDER_TYPE_COLOR: Record<OrderType, string> = {
   retirada:  "bg-cyan-100 text-cyan-800",
   local:     "bg-orange-100 text-orange-800",
 };
+<<<<<<< Updated upstream
+=======
+
+export const PAYMENT_METHOD_LABEL: Record<string, string> = {
+  pix: "📱 Pix",
+  cartao: "💳 Cartão",
+  dinheiro: "💵 Dinheiro",
+  nao_pago: "❌ Não Pago",
+};
+
+export function isPromotionActive(item: any): boolean {
+  if (!item?.is_promotional || item?.promotional_price === null || item?.promotional_price === undefined) {
+    return false;
+  }
+  
+  if (!item.promotion_active_days) {
+    return true;
+  }
+  
+  // Converte dia da semana JS (0=Dom) para padrão Python (0=Seg)
+  const jsDay = new Date().getDay();
+  const pyWeekday = (jsDay + 6) % 7;
+  
+  const activeDays = item.promotion_active_days.split(",");
+  return activeDays.includes(String(pyWeekday));
+}
+
+>>>>>>> Stashed changes

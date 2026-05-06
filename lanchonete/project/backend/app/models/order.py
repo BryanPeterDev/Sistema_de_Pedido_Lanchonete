@@ -30,6 +30,10 @@ VALID_TRANSITIONS: dict[OrderStatus, list[OrderStatus]] = {
 }
 
 
+<<<<<<< Updated upstream
+=======
+# BOTOES PARA PAGAMENTO NA TELA DE PEDIDOS
+>>>>>>> Stashed changes
 class PaymentMethod(str, enum.Enum):
     pix = "pix"
     cartao = "cartao"
@@ -119,6 +123,9 @@ class OrderItem(Base):
     # ── Relacionamentos ───────────────────────────────────────
     order: Mapped["Order"] = relationship(back_populates="items")
     product: Mapped["Product"] = relationship(back_populates="order_items", lazy="joined")  # noqa: F821
+    selected_options: Mapped[list["OrderItemOption"]] = relationship(
+        back_populates="order_item", lazy="joined", cascade="all, delete-orphan"
+    )
 
     @property
     def subtotal(self) -> Decimal:
@@ -126,3 +133,26 @@ class OrderItem(Base):
 
     def __repr__(self) -> str:
         return f"<OrderItem order={self.order_id} product={self.product_id} qty={self.quantity}>"
+
+
+class OrderItemOption(Base):
+    __tablename__ = "order_item_options"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    order_item_id: Mapped[int] = mapped_column(
+        ForeignKey("order_items.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    option_item_id: Mapped[int | None] = mapped_column(
+        ForeignKey("product_option_items.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
+    # Store name and price to keep history even if the option is changed/deleted
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    price_adjustment: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0, nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, default=1, nullable=False, server_default="1")
+
+    order_item: Mapped["OrderItem"] = relationship(back_populates="selected_options")
+    option_item: Mapped["ProductOptionItem"] = relationship()  # noqa: F821
+
+    def __repr__(self) -> str:
+        return f"<OrderItemOption order_item={self.order_item_id} option={self.option_item_id}>"

@@ -95,8 +95,15 @@ export default function AdminCozinhaPage() {
                             <div className="flex justify-between text-surface-900 font-semibold">
                               <span>{item.quantity}x {item.product.name}</span>
                             </div>
+                            {item.selected_options && item.selected_options.length > 0 && (
+                              <div className="text-[10px] text-surface-500 ml-3 leading-tight">
+                                {item.selected_options.map((opt) => (
+                                  <div key={opt.option_item_id}>+ {opt.name}</div>
+                                ))}
+                              </div>
+                            )}
                             {item.notes && (
-                              <div className="text-[10px] text-amber-600 italic">
+                              <div className="text-[10px] text-amber-600 italic mt-0.5 ml-3">
                                 Obs: {item.notes}
                               </div>
                             )}

@@ -1,11 +1,13 @@
 "use client";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChefHat, Clock, Flame, CheckCircle2, LogOut, AlertCircle } from "lucide-react";
+import { ChefHat, Clock, Flame, CheckCircle2, AlertCircle, GripVertical, Pencil } from "lucide-react";
 import api from "@/lib/api";
 import { Spinner } from "@/components/ui";
 import { formatDate, ORDER_TYPE_LABEL, cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import toast from "react-hot-toast";
+import Link from "next/link";
 import type { Order, OrderStatus } from "@/types";
 
 const COLUMNS: { status: OrderStatus; label: string; icon: React.ReactNode; color: string; bgColor: string }[] = [
@@ -32,9 +34,14 @@ const COLUMNS: { status: OrderStatus; label: string; icon: React.ReactNode; colo
   },
 ];
 
-export default function CozinhaPage() {
+const REORDERABLE_STATUS: OrderStatus = "preparando";
+
+export default function AtendenteCozinhaPage() {
   const qc = useQueryClient();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const [orderIdsByStatus, setOrderIdsByStatus] = useState<Partial<Record<OrderStatus, number[]>>>({});
+  const [draggedOrder, setDraggedOrder] = useState<{ id: number; status: OrderStatus } | null>(null);
+  const [dragOverOrderId, setDragOverOrderId] = useState<number | null>(null);
 
   // Fetch all non-terminal orders
   const { data: allOrders, isLoading } = useQuery<Order[]>({
@@ -69,28 +76,64 @@ export default function CozinhaPage() {
     preparando: "Marcar como pronto",
   };
 
+  useEffect(() => {
+    if (!allOrders) return;
+
+    setOrderIdsByStatus((current) => {
+      const next: Partial<Record<OrderStatus, number[]>> = {};
+
+      for (const col of COLUMNS) {
+        const idsFromApi = allOrders.filter((o) => o.status === col.status).map((o) => o.id);
+        const currentIds = current[col.status] ?? [];
+        const keptIds = currentIds.filter((id) => idsFromApi.includes(id));
+        const newIds = idsFromApi.filter((id) => !keptIds.includes(id));
+
+        next[col.status] = [...keptIds, ...newIds];
+      }
+
+      return next;
+    });
+  }, [allOrders]);
+
   function getOrdersByStatus(status: OrderStatus): Order[] {
-    return allOrders?.filter((o) => o.status === status) ?? [];
+    const orders = allOrders?.filter((o) => o.status === status) ?? [];
+    const orderIds = orderIdsByStatus[status];
+
+    if (!orderIds?.length) return orders;
+
+    return [...orders].sort((a, b) => orderIds.indexOf(a.id) - orderIds.indexOf(b.id));
+  }
+
+  function reorderWithinStatus(status: OrderStatus, targetOrderId: number | null, insertAfter = false) {
+    if (!draggedOrder || draggedOrder.status !== status) return;
+
+    setOrderIdsByStatus((current) => {
+      const ids = [...(current[status] ?? getOrdersByStatus(status).map((o) => o.id))];
+      const fromIndex = ids.indexOf(draggedOrder.id);
+      if (fromIndex === -1) return current;
+
+      const [movedId] = ids.splice(fromIndex, 1);
+      const targetIndex = targetOrderId === null ? ids.length : ids.indexOf(targetOrderId);
+      const toIndex = targetOrderId === null || !insertAfter ? targetIndex : targetIndex + 1;
+
+      if (targetIndex === -1) return current;
+      ids.splice(toIndex, 0, movedId);
+
+      return { ...current, [status]: ids };
+    });
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-full flex flex-col bg-surface-950">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-surface-800/50">
+      <header className="flex items-center justify-between px-4 py-4 border-b border-surface-800/50 sm:px-6">
         <div className="flex items-center gap-3">
           <ChefHat size={28} className="text-brand-500" />
           <div>
-            <h1 className="font-display text-xl text-white">Cozinha</h1>
-            <p className="text-xs text-surface-200 font-body">Tempo real (WebSocket) · {user?.name}</p>
+            <h1 className="font-display text-xl text-white">Cozinha (Atendente)</h1>
+            <p className="text-xs text-surface-200 font-body">Visão da cozinha · {user?.name}</p>
           </div>
         </div>
-        <button
-          onClick={logout}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-surface-200 hover:bg-surface-800 hover:text-white transition-colors font-body"
-        >
-          <LogOut size={16} />
-          Sair
-        </button>
       </header>
 
       {/* Kanban */}
@@ -99,11 +142,11 @@ export default function CozinhaPage() {
           <Spinner className="h-10 w-10 text-surface-200" />
         </div>
       ) : (
-        <div className="flex-1 flex gap-4 p-4 overflow-hidden">
+        <div className="flex-1 flex flex-col gap-4 overflow-y-auto p-4 md:flex-row md:overflow-hidden">
           {COLUMNS.map((col) => {
             const orders = getOrdersByStatus(col.status);
             return (
-              <div key={col.status} className={`flex-1 flex flex-col rounded-2xl border-2 ${col.bgColor} bg-surface-900/50 overflow-hidden`}>
+              <div key={col.status} className={`flex min-h-[320px] flex-1 flex-col rounded-2xl border-2 ${col.bgColor} bg-surface-900/50 overflow-hidden md:min-h-0`}>
                 {/* Column header */}
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-surface-800/50">
                   <span className={col.color}>{col.icon}</span>
@@ -114,7 +157,15 @@ export default function CozinhaPage() {
                 </div>
 
                 {/* Cards */}
-                <div className="flex-1 overflow-auto p-3 space-y-3">
+                <div
+                  className="flex-1 overflow-auto p-3 space-y-3"
+                  onDragOver={(e) => {
+                    if (col.status === REORDERABLE_STATUS) e.preventDefault();
+                  }}
+                  onDrop={() => {
+                    if (col.status === REORDERABLE_STATUS) reorderWithinStatus(col.status, null);
+                  }}
+                >
                   {orders.length === 0 ? (
                     <div className="text-center py-8 text-surface-200/50 font-body text-sm">
                       Nenhum pedido
@@ -123,14 +174,54 @@ export default function CozinhaPage() {
                     orders.map((order) => (
                       <div
                         key={order.id}
+                        draggable={order.status === REORDERABLE_STATUS}
+                        onDragStart={() => {
+                          if (order.status === REORDERABLE_STATUS) {
+                            setDraggedOrder({ id: order.id, status: order.status });
+                          }
+                        }}
+                        onDragEnter={() => {
+                          if (order.status === REORDERABLE_STATUS && draggedOrder?.status === order.status) {
+                            setDragOverOrderId(order.id);
+                          }
+                        }}
+                        onDragOver={(e) => {
+                          if (order.status === REORDERABLE_STATUS) e.preventDefault();
+                        }}
+                        onDrop={(e) => {
+                          if (order.status !== REORDERABLE_STATUS) return;
+                          e.stopPropagation();
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const insertAfter = e.clientY > rect.top + rect.height / 2;
+                          reorderWithinStatus(order.status, order.id, insertAfter);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedOrder(null);
+                          setDragOverOrderId(null);
+                        }}
                         className={cn(
-                          "bg-surface-800/80 backdrop-blur rounded-xl p-4 space-y-3 animate-fade-up transition-colors border",
-                          order.is_edited ? "border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.15)]" : "border-surface-700/50 hover:border-surface-600"
+                          "bg-surface-800/80 backdrop-blur rounded-xl p-4 space-y-3 animate-fade-up transition-colors border relative group",
+                          order.status === REORDERABLE_STATUS && "cursor-grab active:cursor-grabbing",
+                          order.is_edited ? "border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.15)]" : "border-surface-700/50 hover:border-surface-600",
+                          draggedOrder?.id === order.id && "opacity-50",
+                          dragOverOrderId === order.id && draggedOrder?.status === order.status && "ring-2 ring-brand-400"
                         )}
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="font-body font-bold text-white text-lg">#{order.id}</span>
-                          <span className="text-xs font-body text-surface-200">{formatDate(order.created_at)}</span>
+                        {/* Edit Button for Attendant */}
+                        <Link
+                          href={`/atendente?edit=${order.id}`}
+                          className="absolute top-3 right-3 p-1.5 rounded-lg bg-surface-700/50 text-surface-300 opacity-0 group-hover:opacity-100 transition-all hover:bg-brand-500 hover:text-white"
+                          title="Editar Pedido"
+                        >
+                          <Pencil size={14} />
+                        </Link>
+
+                        <div className="flex items-center justify-between pr-8">
+                          <div className="flex items-center gap-2">
+                            {order.status === REORDERABLE_STATUS && <GripVertical size={16} className="text-surface-400" />}
+                            <span className="font-body font-bold text-white text-lg">#{order.id}</span>
+                          </div>
+                          <span className="text-[10px] font-body text-surface-400">{formatDate(order.created_at)}</span>
                         </div>
 
                         <div className="text-xs font-body text-surface-200">

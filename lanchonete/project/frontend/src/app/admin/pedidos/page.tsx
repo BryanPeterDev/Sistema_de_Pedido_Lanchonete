@@ -173,8 +173,15 @@ export default function AdminPedidosPage() {
                         <span className="font-semibold">{item.quantity}x</span>
                         <span>{item.product.name}</span>
                       </div>
+                      {item.selected_options && item.selected_options.length > 0 && (
+                        <div className="text-[11px] text-surface-500 ml-6 leading-tight">
+                          {item.selected_options.map((opt) => (
+                            <div key={opt.option_item_id}>+ {opt.name}</div>
+                          ))}
+                        </div>
+                      )}
                       {item.notes && (
-                        <span className="text-[11px] text-amber-600 italic ml-6 block">
+                        <span className="text-[11px] text-amber-600 italic ml-6 block mt-0.5">
                           Obs: {item.notes}
                         </span>
                       )}

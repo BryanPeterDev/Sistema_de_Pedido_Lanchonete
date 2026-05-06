@@ -7,10 +7,16 @@ from app.schemas.product import ProductMinimal
 from pydantic import Field, model_validator
 
 
+class OrderItemOptionCreate(AppModel):
+    option_item_id: int
+    quantity: int = Field(default=1, ge=1)
+
+
 class OrderItemCreate(AppModel):
     product_id: int
     quantity: int = Field(gt=0)
     notes: str | None = Field(default=None, max_length=255)
+    selected_options: list[OrderItemOptionCreate] = []
 
 
 class AttendantOrderCreate(AppModel):
@@ -62,6 +68,14 @@ class OrderUpdate(AppModel):
         return self
 
 
+class OrderItemOptionPublic(AppModel):
+    id: int
+    option_item_id: int
+    name: str
+    price_adjustment: Decimal
+    quantity: int
+
+
 class OrderItemPublic(AppModel):
     id: int
     product_id: int
@@ -70,6 +84,7 @@ class OrderItemPublic(AppModel):
     unit_price: Decimal
     notes: str | None
     subtotal: Decimal
+    selected_options: list[OrderItemOptionPublic] = []
 
 
 class OrderPublic(AppModel):

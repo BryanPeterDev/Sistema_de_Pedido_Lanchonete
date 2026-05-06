@@ -1,4 +1,7 @@
-from app.models.product import Product
+from datetime import datetime
+from typing import Any
+
+from app.models.product import Product, ProductOptionGroup, ProductOptionItem
 from app.models.stock_log import StockLog, StockOperation
 from app.schemas.product import ProductCreate, ProductUpdate
 from app.schemas.stock import StockAdjust
@@ -39,9 +42,48 @@ class ProductService:
         # valida categoria
         CategoryService.get_or_404(db, payload.category_id)
 
-        product = Product(**payload.model_dump())
+        option_groups_data = payload.model_dump(exclude={"option_groups"})
+
+        product = Product(**option_groups_data)
         db.add(product)
         db.flush()  # gera o id antes do log
+
+        if payload.option_groups:
+            group_id_map = {}
+            options_to_process = []
+            for group_data in payload.option_groups:
+                group = ProductOptionGroup(
+                    product_id=product.id,
+                    name=group_data.name,
+                    option_type=group_data.option_type,
+                    is_required=group_data.is_required,
+                    min_selections=group_data.min_selections,
+                    max_selections=group_data.max_selections,
+                )
+                db.add(group)
+                db.flush()
+                if group_data.id:
+                    group_id_map[group_data.id] = group.id
+
+                for option_data in group_data.options:
+                    options_to_process.append((group.id, option_data))
+
+            for g_id, o_data in options_to_process:
+                target_id = o_data.target_group_id
+                if target_id and target_id in group_id_map:
+                    target_id = group_id_map[target_id]
+
+                option = ProductOptionItem(
+                    group_id=g_id,
+                    name=o_data.name,
+                    price_adjustment=o_data.price_adjustment,
+                    target_group_id=target_id,
+                    target_max_value=o_data.target_max_value,
+                    is_promotional=o_data.is_promotional,
+                    promotional_price=o_data.promotional_price,
+                    promotion_active_days=o_data.promotion_active_days,
+                )
+                db.add(option)
 
         # log de estoque inicial
         if product.stock_quantity > 0:
@@ -64,8 +106,53 @@ class ProductService:
         product = ProductService.get_or_404(db, product_id)
         if payload.category_id:
             CategoryService.get_or_404(db, payload.category_id)
-        for field, value in payload.model_dump(exclude_unset=True).items():
+        update_data = payload.model_dump(exclude_unset=True, exclude={"option_groups"})
+        for field, value in update_data.items():
             setattr(product, field, value)
+
+        if payload.option_groups is not None:
+            # Delete existing option groups and recreate
+            db.query(ProductOptionGroup).filter(
+                ProductOptionGroup.product_id == product.id
+            ).delete()
+            db.flush()
+
+            group_id_map = {}
+            options_to_process = []
+            for group_data in payload.option_groups:
+                group = ProductOptionGroup(
+                    product_id=product.id,
+                    name=group_data.name,
+                    option_type=group_data.option_type,
+                    is_required=group_data.is_required,
+                    min_selections=group_data.min_selections,
+                    max_selections=group_data.max_selections,
+                )
+                db.add(group)
+                db.flush()
+                if group_data.id:
+                    group_id_map[group_data.id] = group.id
+
+                for option_data in group_data.options:
+                    options_to_process.append((group.id, option_data))
+
+            for g_id, o_data in options_to_process:
+                target_id = o_data.target_group_id
+                if target_id and target_id in group_id_map:
+                    target_id = group_id_map[target_id]
+
+                option = ProductOptionItem(
+                    group_id=g_id,
+                    name=o_data.name,
+                    price_adjustment=o_data.price_adjustment,
+                    target_group_id=target_id,
+                    target_max_value=o_data.target_max_value,
+                    is_promotional=o_data.is_promotional,
+                    promotional_price=o_data.promotional_price,
+                    promotion_active_days=o_data.promotion_active_days,
+                )
+                db.add(option)
+
         db.commit()
         db.refresh(product)
         return product
@@ -135,3 +222,21 @@ class ProductService:
             .order_by(Product.stock_quantity.asc())
             .all()
         )
+
+    @staticmethod
+    def is_promotion_active(item: Any) -> bool:
+        """Verifica se a promoção está ativa no momento (dia da semana)."""
+        if (
+            not getattr(item, "is_promotional", False)
+            or getattr(item, "promotional_price", None) is None
+        ):
+            return False
+
+        active_days_str = getattr(item, "promotion_active_days", None)
+        if not active_days_str:
+            return True  # Se não definiu dias, assume sempre ativa
+
+        # 0=Segunda, 6=Domingo no Python datetime.weekday()
+        today_weekday = datetime.now().weekday()
+        active_days = active_days_str.split(",")
+        return str(today_weekday) in active_days

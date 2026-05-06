@@ -171,11 +171,23 @@ export default function MotoboyPage() {
                         {delivery.order.items && delivery.order.items.length > 0 && (
                           <div className="pt-2 border-t border-surface-50">
                             <p className="text-[10px] font-bold text-surface-300 uppercase tracking-wider mb-2">Itens do Pedido</p>
-                            <div className="flex flex-wrap gap-1.5">
+                            <div className="flex flex-col gap-1.5">
                               {delivery.order.items.map(item => (
-                                <span key={item.id} className="inline-flex bg-surface-100 text-surface-700 text-xs px-2 py-1 rounded-md font-body font-medium">
-                                  {item.quantity}x {item.product.name}
-                                </span>
+                                <div key={item.id} className="flex flex-col bg-surface-100 px-2 py-1.5 rounded-md">
+                                  <span className="text-surface-700 text-xs font-body font-medium">
+                                    {item.quantity}x {item.product.name}
+                                  </span>
+                                  {item.selected_options && item.selected_options.length > 0 && (
+                                    <span className="text-[10px] text-surface-500 ml-3 leading-tight mt-0.5">
+                                      {item.selected_options.map(opt => `+ ${opt.name}`).join(', ')}
+                                    </span>
+                                  )}
+                                  {item.notes && (
+                                    <span className="text-[10px] text-amber-600 italic ml-3 mt-0.5">
+                                      Obs: {item.notes}
+                                    </span>
+                                  )}
+                                </div>
                               ))}
                             </div>
                           </div>
