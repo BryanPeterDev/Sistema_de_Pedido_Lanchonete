@@ -48,8 +48,7 @@ export const ORDER_TYPE_COLOR: Record<OrderType, string> = {
   retirada:  "bg-cyan-100 text-cyan-800",
   local:     "bg-orange-100 text-orange-800",
 };
-<<<<<<< Updated upstream
-=======
+
 
 export const PAYMENT_METHOD_LABEL: Record<string, string> = {
   pix: "📱 Pix",
@@ -57,6 +56,7 @@ export const PAYMENT_METHOD_LABEL: Record<string, string> = {
   dinheiro: "💵 Dinheiro",
   nao_pago: "❌ Não Pago",
 };
+
 
 export function isPromotionActive(item: any): boolean {
   if (!item?.is_promotional || item?.promotional_price === null || item?.promotional_price === undefined) {
@@ -75,4 +75,4 @@ export function isPromotionActive(item: any): boolean {
   return activeDays.includes(String(pyWeekday));
 }
 
->>>>>>> Stashed changes
+

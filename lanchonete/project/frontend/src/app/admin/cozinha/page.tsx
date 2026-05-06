@@ -1,6 +1,7 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Clock, Flame, CheckCircle2, AlertCircle } from "lucide-react";
+import { Clock, Flame, CheckCircle2, AlertCircle, Pencil } from "lucide-react";
+import Link from "next/link";
 import api from "@/lib/api";
 import { Spinner } from "@/components/ui";
 import { formatDate, ORDER_TYPE_LABEL, cn } from "@/lib/utils";
@@ -67,13 +68,21 @@ export default function AdminCozinhaPage() {
                     <div 
                       key={order.id} 
                       className={cn(
-                        "border rounded-xl p-3 space-y-2 transition-shadow",
+                        "border rounded-xl p-3 space-y-2 transition-shadow relative group",
                         order.is_edited ? "border-amber-400 bg-amber-50/30 shadow-[0_0_15px_rgba(251,191,36,0.2)]" : "border-surface-100 hover:shadow-sm"
                       )}
                     >
-                      <div className="flex items-center justify-between">
+                      <Link
+                        href={`/admin/novo-pedido?edit=${order.id}`}
+                        className="absolute top-3 right-3 p-1.5 rounded-lg bg-surface-100 text-surface-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-brand-500 hover:text-white"
+                        title="Editar Pedido"
+                      >
+                        <Pencil size={12} />
+                      </Link>
+
+                      <div className="flex items-center justify-between pr-6">
                         <span className="font-body font-bold text-surface-900">#{order.id}</span>
-                        <span className="text-xs text-surface-200 font-body">{formatDate(order.created_at)}</span>
+                        <span className="text-[10px] text-surface-200 font-body">{formatDate(order.created_at)}</span>
                       </div>
                       <div className="text-xs font-body text-surface-800">
                         {order.customer_name} · {ORDER_TYPE_LABEL[order.order_type]}
