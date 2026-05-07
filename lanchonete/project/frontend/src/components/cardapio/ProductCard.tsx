@@ -1,20 +1,20 @@
 "use client";
-import Image from "next/image";
 import { AlertCircle } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getImageUrl } from "@/lib/utils";
 import type { Product } from "@/types";
 
 export default function ProductCard({ product }: { product: Product }) {
+  const imageUrl = getImageUrl(product.image_path || product.image_url);
+
   return (
     <div className="group bg-white rounded-3xl border border-surface-100 overflow-hidden hover:shadow-lg hover:shadow-surface-800/8 hover:-translate-y-0.5 transition-all duration-300">
       {/* Image */}
       <div className="relative h-44 bg-surface-50 overflow-hidden">
-        {product.image_url ? (
-          <Image
-            src={product.image_url}
+        {imageUrl ? (
+          <img
+            src={imageUrl}
             alt={product.name}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-5xl">🍔</div>

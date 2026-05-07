@@ -32,6 +32,7 @@ class ProductCreate(AppModel):
     description: str | None = None
     price: Decimal = Field(ge=0)
     image_url: str | None = None
+    image_path: str | None = None
     is_available: bool = True
     is_visible: bool = True
     is_promotional: bool = False
@@ -55,6 +56,7 @@ class ProductUpdate(AppModel):
     description: str | None = None
     price: Decimal | None = Field(default=None, ge=0)
     image_url: str | None = None
+    image_path: str | None = None
     is_available: bool | None = None
     is_visible: bool | None = None
     is_promotional: bool | None = None
@@ -99,6 +101,7 @@ class ProductPublic(AppModel):
     description: str | None
     price: Decimal
     image_url: str | None
+    image_path: str | None
     is_available: bool
     is_visible: bool
     is_promotional: bool

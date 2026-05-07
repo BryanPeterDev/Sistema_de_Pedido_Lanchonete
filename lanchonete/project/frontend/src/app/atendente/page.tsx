@@ -1,25 +1,10 @@
-
-
+"use client";
 import { useState } from "react";
-import { Search, Plus, Minus, Trash2, ShoppingBag, MapPin, Phone, User, StickyNote } from "lucide-react";
-
-import { Suspense, useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { Search, Plus, Minus, Trash2, ShoppingBag, MapPin, Phone, User, StickyNote, AlertTriangle } from "lucide-react";
-
+import { Search, Plus, Minus, Trash2, ShoppingBag, MapPin, Phone, User, StickyNote, Zap } from "lucide-react";
 import { useProducts, useCategories } from "@/hooks/useProducts";
-import { useCreateOrder, useUpdateOrder, useOrder } from "@/hooks/useOrders";
-import { formatCurrency, cn } from "@/lib/utils";
-import { Spinner, Button, Input } from "@/components/ui";
-
-import { Suspense, useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { Search, Plus, Minus, Trash2, ShoppingBag, MapPin, Phone, User, StickyNote, AlertTriangle, Zap } from "lucide-react";
-import { useProducts, useCategories } from "@/hooks/useProducts";
-import { useCreateOrder, useUpdateOrder, useOrder } from "@/hooks/useOrders";
+import { useCreateOrder } from "@/hooks/useOrders";
 import { formatCurrency, cn, isPromotionActive } from "@/lib/utils";
 import { Spinner, Button, Modal } from "@/components/ui";
-
 import toast from "react-hot-toast";
 import type { Product, OrderType, PaymentMethod, ProductOptionItem, ProductOptionGroup } from "@/types";
 
@@ -42,23 +27,9 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: "dinheiro", label: "💵 Dinheiro" },
   { value: "pix",     label: "📱 Pix" },
   { value: "cartao",  label: "💳 Cartão" },
-  { value: "nao_pago", label: "❌ Não Pago" },
 ];
 
-export default function AtendentePageWrapper() {
-  return (
-    <Suspense fallback={<div className="flex justify-center p-20"><Spinner /></div>}>
-      <AtendentePage />
-    </Suspense>
-  );
-}
-
-function AtendentePage() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const editId = searchParams.get("edit");
-  const { data: orderToEdit } = useOrder(editId ? Number(editId) : 0);
-
+export default function AtendentePage() {
   const [selectedCategory, setSelectedCategory] = useState<number | undefined>();
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<LocalCartItem[]>([]);
@@ -68,63 +39,10 @@ function AtendentePage() {
   const [orderType, setOrderType] = useState<OrderType>("local");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("dinheiro");
   const [notes, setNotes] = useState("");
-  const [editNote, setEditNote] = useState("");
 
   const { data: categories } = useCategories();
   const { data: products, isLoading } = useProducts(selectedCategory);
   const createOrder = useCreateOrder();
-
-  const updateOrder = useUpdateOrder();
-
-  useEffect(() => {
-    if (orderToEdit) {
-      setCustomerName(orderToEdit.customer_name);
-      setCustomerPhone(orderToEdit.customer_phone || "");
-      setCustomerAddress(orderToEdit.customer_address || "");
-      setOrderType(orderToEdit.order_type);
-      setPaymentMethod(orderToEdit.payment_method);
-      setNotes(orderToEdit.notes || "");
-      
-
-      const newCart = orderToEdit.items.map(item => {
-        const optionsTotal = item.selected_options?.reduce((acc, opt) => acc + Number(opt.price_adjustment), 0) || 0;
-        const basePrice = Number(item.unit_price) - optionsTotal;
-
-        return {
-          cartId: Math.random().toString(36).substring(7),
-          product: {
-            ...item.product,
-            price: basePrice,
-            is_promotional: false
-          },
-          quantity: item.quantity,
-          notes: item.notes || undefined,
-          showNotes: !!item.notes,
-          selected_options: item.selected_options ? item.selected_options.map(o => ({
-            option_item_id: o.option_item_id,
-            name: o.name,
-            price_adjustment: Number(o.price_adjustment),
-            quantity: o.quantity || 1
-          })) : []
-        };
-      });
-      setCart(newCart as any);
-    }
-  }, [orderToEdit]);
-
-      const newCart = orderToEdit.items.map(item => ({
-        product: {
-          ...item.product,
-          price: item.unit_price,
-          is_promotional: false
-        },
-        quantity: item.quantity,
-        notes: item.notes || undefined,
-        showNotes: !!item.notes
-      }));
-      setCart(newCart as any);
-    }
-  }, [orderToEdit]);
 
 
   const allFiltered = products?.filter((p) =>
@@ -237,83 +155,46 @@ function AtendentePage() {
   const total = cart.reduce((sum, i) => {
     const activePrice = i.product.is_promotional && i.product.promotional_price 
       ? Number(i.product.promotional_price) 
-
-      : Number(i.product.price);
-    return sum + activePrice * i.quantity;
-  }, 0);
-
-  async function handleSubmit() {
-    if (!customerName.trim()) {
-      toast.error("Informe o nome do cliente");
-      return;
-    }
-    if (cart.length === 0) {
-      toast.error("Adicione pelo menos um item");
-      return;
-    }
-    if (orderType === "delivery" && !customerPhone.trim()) {
-      toast.error("Informe o telefone para delivery");
-      return;
-    }
-    if (orderType === "delivery" && !customerAddress.trim()) {
-      toast.error("Informe o endereço para delivery");
-      return;
-    }
-
       : Number(i.product.price || 0);
     const optionsPrice = i.selected_options?.reduce((optSum, opt) => optSum + (Number(opt.price_adjustment) * (opt.quantity || 1)), 0) || 0;
     return sum + (isNaN(activePrice) ? 0 : activePrice + optionsPrice) * i.quantity;
   }, 0);
 
   async function handleSubmit() {
-
-      : Number(i.product.price || 0);
-    return sum + (isNaN(activePrice) ? 0 : activePrice) * i.quantity;
-  }, 0);
-
-  async function handleSubmit() {
-
     if (!customerName.trim()) { toast.error("Informe o nome do cliente"); return; }
     if (cart.length === 0) { toast.error("Adicione pelo menos um item"); return; }
     if (orderType === "delivery" && !customerPhone.trim()) { toast.error("Informe o telefone para delivery"); return; }
     if (orderType === "delivery" && !customerAddress.trim()) { toast.error("Informe o endereço para delivery"); return; }
 
-    if (editId && !editNote.trim()) { toast.error("Informe o motivo da alteração"); return; }
-
-    const payload = {
-      items: cart.map((i) => ({
-        product_id: i.product.id,
-        quantity: i.quantity,
-        notes: i.notes?.trim() || undefined,
-
-        selected_options: i.selected_options?.map(opt => ({ 
-          option_item_id: opt.option_item_id,
-          quantity: opt.quantity || 1
-        }))
-
-      })),
-      customer_name: customerName.trim(),
-      order_type: orderType,
-      payment_method: paymentMethod,
-      notes: notes.trim() || undefined,
-      customer_phone: orderType === "delivery" ? customerPhone.trim() : undefined,
-      customer_address: orderType === "delivery" ? customerAddress.trim() : undefined,
-      edit_note: editNote.trim() || "Alteração",
-    };
-
     try {
-      if (editId) {
-        await updateOrder.mutateAsync({ id: Number(editId), payload });
-        toast.success("Pedido atualizado com sucesso! 📝");
-        router.push("/atendente/pedidos");
-      } else {
-        await createOrder.mutateAsync(payload);
-        toast.success("Pedido criado com sucesso! 🎉");
-        // Reset
-        setCart([]); setCustomerName(""); setCustomerPhone(""); setCustomerAddress(""); setNotes(""); setOrderType("local"); setPaymentMethod("dinheiro");
-      }
+      await createOrder.mutateAsync({
+        items: cart.map((i) => ({
+          product_id: i.product.id,
+          quantity: i.quantity,
+          notes: i.notes?.trim() || undefined,
+          selected_options: i.selected_options?.map(opt => ({ 
+            option_item_id: opt.option_item_id,
+            quantity: opt.quantity || 1
+          }))
+        })),
+        customer_name: customerName.trim(),
+        order_type: orderType,
+        payment_method: paymentMethod,
+        notes: notes.trim() || undefined,
+        customer_phone: orderType === "delivery" ? customerPhone.trim() : undefined,
+        customer_address: orderType === "delivery" ? customerAddress.trim() : undefined,
+      });
+      toast.success("Pedido criado com sucesso! 🎉");
+      // Reset
+      setCart([]);
+      setCustomerName("");
+      setCustomerPhone("");
+      setCustomerAddress("");
+      setNotes("");
+      setOrderType("local");
+      setPaymentMethod("dinheiro");
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail ?? "Erro ao salvar pedido");
+      toast.error(err?.response?.data?.detail ?? "Erro ao criar pedido");
     }
   }
 
@@ -340,9 +221,7 @@ function AtendentePage() {
       {/* ── Left: Product Grid ──────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="p-6 pb-0 space-y-4">
-          <h1 className="font-display text-2xl text-surface-900">
-            {editId ? `Editar Pedido #${editId}` : "Novo Pedido"}
-          </h1>
+          <h1 className="font-display text-2xl text-surface-900">Novo Pedido</h1>
 
           {/* Search */}
           <div className="relative">
@@ -437,26 +316,12 @@ function AtendentePage() {
       <div className="w-[380px] bg-white border-l border-surface-100 flex flex-col overflow-hidden">
         <div className="p-5 border-b border-surface-100">
           <div className="flex items-center gap-2">
-            <ShoppingBag size={20} className={editId ? "text-amber-500" : "text-brand-500"} />
-            <h2 className="font-display text-lg text-surface-900">
-              {editId ? "Edição do Pedido" : "Resumo do Pedido"}
-            </h2>
+            <ShoppingBag size={20} className="text-brand-500" />
+            <h2 className="font-display text-lg text-surface-900">Resumo do Pedido</h2>
           </div>
         </div>
 
         <div className="flex-1 overflow-auto p-5 space-y-5">
-          {editId && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 animate-fade-up">
-              <label className="flex items-center gap-2 text-xs font-semibold text-amber-800 font-body mb-2 uppercase tracking-wide">
-                <AlertTriangle size={14} /> Motivo da Alteração *
-              </label>
-              <textarea 
-                placeholder="Ex: Trocou cebola, tirou refrigerante..." 
-                value={editNote} onChange={(e) => setEditNote(e.target.value)} rows={2}
-                className="w-full px-3 py-2 rounded-lg border border-amber-200 bg-white font-body text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none text-amber-900" 
-              />
-            </div>
-          )}
           {/* Order type */}
           <div>
             <label className="text-xs font-semibold text-surface-800 font-body block mb-2 uppercase tracking-wide">Tipo do Pedido</label>
@@ -686,12 +551,12 @@ function AtendentePage() {
           </div>
           <Button
             onClick={handleSubmit}
-            loading={createOrder.isPending || updateOrder.isPending}
+            loading={createOrder.isPending}
             disabled={cart.length === 0 || !customerName.trim()}
             size="lg"
             className="w-full"
           >
-            {editId ? "Salvar Alterações" : "Finalizar Pedido"}
+            Finalizar Pedido
           </Button>
         </div>
       </div>

@@ -20,6 +20,7 @@ class Product(TimestampMixin, Base):
     description: Mapped[str | None] = mapped_column(Text)
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     image_url: Mapped[str | None] = mapped_column(String(500))
+    image_path: Mapped[str | None] = mapped_column(String(500))
     is_available: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_visible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_promotional: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

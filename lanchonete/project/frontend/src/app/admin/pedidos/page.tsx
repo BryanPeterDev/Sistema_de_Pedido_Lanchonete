@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useOrders, useUpdateOrderStatus } from "@/hooks/useOrders";
 import { formatCurrency, formatDate, ORDER_STATUS_LABEL, ORDER_STATUS_COLOR, ORDER_TYPE_LABEL, ORDER_TYPE_COLOR, cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui";
-import { AlertTriangle, Pencil, RotateCcw } from "lucide-react";
+import { Pencil, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import type { OrderStatus } from "@/types";
@@ -77,16 +77,6 @@ export default function AdminPedidosPage() {
     }
   }
 
-  async function handleRefund(id: number) {
-    if (!confirm("Extornar este pedido? Ele sera movido para Cancelados.")) return;
-    try {
-      await updateStatus.mutateAsync({ id, status: "cancelado" });
-      toast.success(`Pedido #${id} extornado`);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.detail ?? "Erro ao extornar");
-    }
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -144,7 +134,7 @@ export default function AdminPedidosPage() {
                     </button>
                   )}
                   {/* EDIT BUTTON */}
-                  {order.status !== "cancelado" && (
+                  {(order.status === "recebido" || order.status === "preparando" || order.status === "pronto") && (
                     <Link
                       href={`/admin/novo-pedido?edit=${order.id}`}
                       className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-100 text-surface-600 hover:bg-brand-100 hover:text-brand-600 transition-colors"
@@ -152,16 +142,6 @@ export default function AdminPedidosPage() {
                     >
                       <Pencil size={16} />
                     </Link>
-                  )}
-                  {order.status !== "cancelado" && (
-                    <button
-                      onClick={() => handleRefund(order.id)}
-                      disabled={updateStatus.isPending}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-red-600 text-sm font-semibold font-body hover:bg-red-50 transition-colors disabled:opacity-50"
-                    >
-                      <RotateCcw size={15} />
-                      Extornar
-                    </button>
                   )}
                   {(order.status === "recebido" || order.status === "preparando") && (
                     <button

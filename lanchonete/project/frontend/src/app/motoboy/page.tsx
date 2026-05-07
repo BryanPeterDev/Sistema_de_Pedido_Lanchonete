@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Truck, CheckCircle2, MapPin, Phone, User, Package, Wallet, Clock, CheckCircle } from "lucide-react";
+import { Truck, CheckCircle2, MapPin, LogOut, Phone, User, Package, Wallet, Clock, CheckCircle } from "lucide-react";
 import { useDeliveries, useClaimDelivery, useUpdateDeliveryStatus } from "@/hooks/useDeliveries";
 import { Spinner, Button } from "@/components/ui";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -20,7 +20,7 @@ const ORDER_STATUS_LABEL: Record<string, string> = {
 };
 
 export default function MotoboyPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { data: deliveries = [], isLoading } = useDeliveries();
   const claimMut = useClaimDelivery();
   const updateMut = useUpdateDeliveryStatus();
@@ -45,9 +45,7 @@ export default function MotoboyPage() {
   }
 
   // Filtragem e Lógica de Ganhos
-  const myDeliveries = deliveries.filter(
-    (d) => (d.motoboy_id === user?.id || !d.motoboy_id) && d.order?.status !== "cancelado"
-  );
+  const myDeliveries = deliveries.filter(d => d.motoboy_id === user?.id || !d.motoboy_id);
   
   const andamento = myDeliveries.filter(d => d.status !== "entregue");
   const entregues = myDeliveries.filter(d => d.status === "entregue" && d.motoboy_id === user?.id);
@@ -66,7 +64,23 @@ export default function MotoboyPage() {
   }, 0);
 
   return (
-    <div className="min-h-full bg-surface-50 pb-20">
+    <div className="min-h-screen bg-surface-50 pb-20">
+      {/* Header */}
+      <header className="bg-surface-950 text-white px-4 py-4 flex items-center justify-between sticky top-0 z-10">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-brand-500 flex items-center justify-center font-bold text-sm">
+            {user?.name?.[0]?.toUpperCase()}
+          </div>
+          <div>
+            <p className="font-body font-semibold text-sm">{user?.name}</p>
+            <p className="text-xs text-surface-200 font-body">Motoboy</p>
+          </div>
+        </div>
+        <button onClick={logout} className="p-2 rounded-xl hover:bg-surface-800 transition-colors text-surface-200">
+          <LogOut size={18} />
+        </button>
+      </header>
+
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         
         {/* Earnings Card */}

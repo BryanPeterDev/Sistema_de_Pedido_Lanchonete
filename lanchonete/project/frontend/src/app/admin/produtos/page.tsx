@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Plus, Pencil, Trash2, AlertTriangle, Zap } from "lucide-react";
 import { useProducts, useCategories, useCreateProduct, useUpdateProduct, useDeleteProduct } from "@/hooks/useProducts";
-import { formatCurrency, cn } from "@/lib/utils";
+import { formatCurrency, cn, getImageUrl } from "@/lib/utils";
 import { Spinner, Modal, Button, Input, EmptyState } from "@/components/ui";
 import toast from "react-hot-toast";
 import type { Product } from "@/types";
@@ -33,6 +33,7 @@ function ProductForm({
     description: initial?.description ?? "",
     price: initial?.price ?? "",
     image_url: initial?.image_url ?? "",
+    image_path: initial?.image_path ?? "",
     category_id: initial?.category?.id ?? categories[0]?.id ?? 0,
     is_available: initial?.is_available ?? true,
     is_promotional: initial?.is_promotional ?? false,
@@ -223,10 +224,8 @@ function ProductForm({
                       >
                         <Zap size={14} className={opt.is_promotional ? "fill-current" : ""} />
                       </button>
-
                       <button type="button" onClick={() => removeOption(gIdx, oIdx)} className="text-red-400 p-1 hover:bg-red-50 rounded-md transition-colors"><Trash2 size={14} /></button>
                     </div>
-
                     {opt.is_promotional && (
                       <div className="flex items-center gap-2 pl-2 animate-fade-up">
                         <span className="text-[10px] font-bold text-amber-600 uppercase tracking-tight">Promo R$:</span>
@@ -278,7 +277,7 @@ function ProductForm({
         ))}
       </div>
 
-      <Input label="URL da imagem" type="url" placeholder="https://..." value={form.image_url} onChange={set("image_url")} />
+      <Input label="Nome do arquivo da imagem (colocar na pasta ImagensProdutos)" placeholder="ex: x-tudo.jpg" value={form.image_path} onChange={set("image_path")} />
       <Button type="submit" loading={loading} className="w-full">
         {initial ? "Salvar alterações" : "Criar produto"}
       </Button>
@@ -304,6 +303,7 @@ export default function AdminProdutosPage() {
       promotional_price: data.is_promotional && data.promotional_price ? Number(data.promotional_price) : null,
       promotion_active_days: data.promotion_active_days,
       image_url: data.image_url || null,
+      image_path: data.image_path || null,
       description: data.description || null,
       option_groups: data.option_groups,
     };
@@ -325,6 +325,7 @@ export default function AdminProdutosPage() {
       promotional_price: data.is_promotional && data.promotional_price ? Number(data.promotional_price) : null,
       promotion_active_days: data.promotion_active_days,
       image_url: data.image_url || null,
+      image_path: data.image_path || null,
       description: data.description || null,
       option_groups: data.option_groups,
     };
@@ -377,15 +378,26 @@ export default function AdminProdutosPage() {
               {products.map((product) => (
                 <tr key={product.id} className="hover:bg-surface-50 transition-colors">
                   <td className="px-5 py-4">
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold text-surface-900">{product.name}</p>
-                      {product.is_promotional && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider">
-                          Promoção
-                        </span>
-                      )}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-surface-100 flex items-center justify-center text-lg overflow-hidden flex-shrink-0">
+                        {(product.image_path || product.image_url) ? (
+                          <img src={getImageUrl(product.image_path || product.image_url) || ""} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          "🍔"
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-surface-900">{product.name}</p>
+                          {product.is_promotional && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider">
+                              Promoção
+                            </span>
+                          )}
+                        </div>
+                        {product.description && <p className="text-xs text-surface-200 mt-0.5 line-clamp-1">{product.description}</p>}
+                      </div>
                     </div>
-                    {product.description && <p className="text-xs text-surface-200 mt-0.5 line-clamp-1">{product.description}</p>}
                   </td>
                   <td className="px-5 py-4 text-surface-800">{product.category.name}</td>
                   <td className="px-5 py-4 font-semibold text-surface-900">

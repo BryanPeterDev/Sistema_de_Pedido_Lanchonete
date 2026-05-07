@@ -5,6 +5,8 @@ from app.core.exceptions import add_exception_handlers
 from app.core.middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 
 
 @asynccontextmanager
@@ -36,6 +38,12 @@ def create_app() -> FastAPI:
     from app.api.v1 import router as api_v1
 
     app.include_router(api_v1, prefix="/api/v1")
+
+    # Monta a pasta ImagensProdutos para servir os arquivos estaticamente
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+    imagens_path = os.path.join(project_root, "ImagensProdutos")
+    os.makedirs(imagens_path, exist_ok=True)
+    app.mount("/ImagensProdutos", StaticFiles(directory=imagens_path), name="ImagensProdutos")
 
     @app.get("/health")
     def health():

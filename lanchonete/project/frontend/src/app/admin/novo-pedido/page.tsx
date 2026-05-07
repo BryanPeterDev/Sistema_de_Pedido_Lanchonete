@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Search, Plus, Minus, Trash2, ShoppingBag, MapPin, Phone, User, StickyNote, AlertTriangle, Zap } from "lucide-react";
 import { useProducts, useCategories } from "@/hooks/useProducts";
 import { useCreateOrder, useUpdateOrder, useOrder } from "@/hooks/useOrders";
-import { formatCurrency, cn, isPromotionActive } from "@/lib/utils";
+import { formatCurrency, cn, isPromotionActive, getImageUrl } from "@/lib/utils";
 import { Spinner, Button, Modal } from "@/components/ui";
 import toast from "react-hot-toast";
 import type { Product, OrderType, PaymentMethod, ProductOptionItem, ProductOptionGroup } from "@/types";
@@ -28,7 +28,6 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: "dinheiro", label: "💵 Dinheiro" },
   { value: "pix",     label: "📱 Pix" },
   { value: "cartao",  label: "💳 Cartão" },
-  { value: "nao_pago", label: "❌ Não Pago" },
 ];
 
 export default function AdminNovoPedidoPageWrapper() {
@@ -70,18 +69,6 @@ function AdminNovoPedidoPage() {
       setPaymentMethod(orderToEdit.payment_method);
       setNotes(orderToEdit.notes || "");
       
-
-      const newCart = orderToEdit.items.map(item => ({
-        product: {
-          ...item.product,
-          price: item.unit_price,
-          is_promotional: false // Prevents using product.promotional_price which might be missing
-        },
-        quantity: item.quantity,
-        notes: item.notes || undefined,
-        showNotes: !!item.notes
-      }));
-
       const newCart = orderToEdit.items.map(item => {
         const optionsTotal = item.selected_options?.reduce((acc, opt) => acc + Number(opt.price_adjustment), 0) || 0;
         const basePrice = Number(item.unit_price) - optionsTotal;
@@ -104,7 +91,6 @@ function AdminNovoPedidoPage() {
           })) : []
         };
       });
-
       setCart(newCart as any);
     }
   }, [orderToEdit]);
@@ -219,11 +205,9 @@ function AdminNovoPedidoPage() {
   const total = cart.reduce((sum, i) => {
     const activePrice = i.product.is_promotional && i.product.promotional_price 
       ? Number(i.product.promotional_price) 
-
-  
       : Number(i.product.price || 0);
-    return sum + (isNaN(activePrice) ? 0 : activePrice) * i.quantity;
-
+    const optionsPrice = i.selected_options?.reduce((optSum, opt) => optSum + (Number(opt.price_adjustment) * (opt.quantity || 1)), 0) || 0;
+    return sum + (isNaN(activePrice) ? 0 : activePrice + optionsPrice) * i.quantity;
   }, 0);
 
   async function handleSubmit() {
@@ -353,8 +337,8 @@ function AdminNovoPedidoPage() {
                   >
                     <div className="flex items-start gap-3">
                       <div className="w-14 h-14 rounded-xl bg-surface-50 flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden">
-                        {product.image_url ? (
-                          <img src={product.image_url} alt="" className="w-full h-full object-cover" />
+                        {(product.image_path || product.image_url) ? (
+                          <img src={getImageUrl(product.image_path || product.image_url) || undefined} alt="" className="w-full h-full object-cover" />
                         ) : (
                           "🍔"
                         )}

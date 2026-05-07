@@ -12,7 +12,7 @@ export type OrderStatus =
 
 export type OrderType = "delivery" | "retirada" | "local";
 
-export type PaymentMethod = "pix" | "cartao" | "dinheiro" | "nao_pago";
+export type PaymentMethod = "pix" | "cartao" | "dinheiro";
 
 export type DeliveryStatus = "pendente" | "saiu_para_entrega" | "entregue";
 
@@ -67,6 +67,7 @@ export interface Product {
   description: string | null;
   price: string;
   image_url?: string | null;
+  image_path?: string | null;
   is_available?: boolean;
   is_visible?: boolean;
   is_promotional?: boolean;

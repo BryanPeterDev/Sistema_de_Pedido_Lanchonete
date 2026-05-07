@@ -1,14 +1,12 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PlusCircle, ClipboardList, LogOut, Truck, ChefHat } from "lucide-react";
+import { PlusCircle, ClipboardList, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/atendente",         label: "Novo Pedido",  icon: PlusCircle },
- { href: "/atendente/cozinha",  label: "Cozinha",       icon: ChefHat },
-  { href: "/atendente/entregas", label: "Entregas",     icon: Truck },
   { href: "/atendente/pedidos", label: "Pedidos",      icon: ClipboardList },
 ];
 
