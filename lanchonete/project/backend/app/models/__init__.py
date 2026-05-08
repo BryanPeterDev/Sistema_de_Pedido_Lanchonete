@@ -1,3 +1,4 @@
+from app.models.cash_register import CashRegister, CashRegisterStatus
 from app.models.category import Category
 from app.models.chat_session import ChatSession
 from app.models.delivery import Delivery, DeliveryStatus
@@ -37,4 +38,6 @@ __all__ = [
     "Notification",
     "NotificationChannel",
     "ChatSession",
+    "CashRegister",
+    "CashRegisterStatus",
 ]

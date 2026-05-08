@@ -1,11 +1,19 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingBag, Package, Tag, Boxes, Users, PlusCircle, ChefHat, Truck, LogOut, LayoutGrid } from "lucide-react";
+import { ShoppingBag, Package, Tag, Boxes, Users, PlusCircle, ChefHat, Truck, LogOut, LayoutGrid, BarChart2, DollarSign, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 const sections = [
+  {
+    title: "ANÁLISE",
+    links: [
+      { href: "/admin/dashboard", label: "Dashboard",    icon: BarChart2 },
+      { href: "/admin/relatorios", label: "Relatórios",   icon: FileText },
+      { href: "/admin/caixa",     label: "Caixa",        icon: DollarSign },
+    ],
+  },
   {
     title: "OPERAÇÃO",
     links: [

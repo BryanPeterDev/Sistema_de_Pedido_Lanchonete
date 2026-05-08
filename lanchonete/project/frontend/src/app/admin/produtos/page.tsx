@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Plus, Pencil, Trash2, AlertTriangle, Zap } from "lucide-react";
 import { useProducts, useCategories, useCreateProduct, useUpdateProduct, useDeleteProduct } from "@/hooks/useProducts";
 import { formatCurrency, cn, getImageUrl } from "@/lib/utils";
-import { Spinner, Modal, Button, Input, EmptyState } from "@/components/ui";
+import { Spinner, Modal, Button, Input, EmptyState, ConfirmModal } from "@/components/ui";
 import toast from "react-hot-toast";
 import type { Product } from "@/types";
 
@@ -294,6 +294,7 @@ export default function AdminProdutosPage() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [deletingId, setDeletingId] = useState<{ id: number; name: string } | null>(null);
 
   async function handleCreate(data: any) {
     const payload = {
@@ -338,13 +339,14 @@ export default function AdminProdutosPage() {
     }
   }
 
-  async function handleDelete(id: number, name: string) {
-    if (!confirm(`Desativar "${name}"?`)) return;
+  async function handleDelete() {
+    if (!deletingId) return;
     try {
-      await deleteProduct.mutateAsync(id);
-      toast.success("Produto desativado");
+      await deleteProduct.mutateAsync(deletingId.id);
+      toast.success("Produto excluído");
+      setDeletingId(null);
     } catch {
-      toast.error("Erro ao desativar");
+      toast.error("Erro ao excluir");
     }
   }
 
@@ -418,7 +420,7 @@ export default function AdminProdutosPage() {
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2 justify-end">
                       <button onClick={() => setEditing(product)} className="p-1.5 rounded-lg hover:bg-surface-100 text-surface-800 transition-colors"><Pencil size={15} /></button>
-                      <button onClick={() => handleDelete(product.id, product.name)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 transition-colors"><Trash2 size={15} /></button>
+                      <button onClick={() => setDeletingId({ id: product.id, name: product.name })} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 transition-colors"><Trash2 size={15} /></button>
                     </div>
                   </td>
                 </tr>
@@ -434,6 +436,16 @@ export default function AdminProdutosPage() {
       <Modal open={!!editing} onClose={() => setEditing(null)} title="Editar produto">
         {editing && <ProductForm initial={editing} categories={categories} onSubmit={handleUpdate} loading={updateProduct.isPending} />}
       </Modal>
+
+      <ConfirmModal 
+        open={!!deletingId} 
+        onClose={() => setDeletingId(null)} 
+        onConfirm={handleDelete}
+        title="Excluir Produto"
+        message={`Tem certeza que deseja excluir o produto "${deletingId?.name}"? Ele deixará de aparecer no cardápio.`}
+        confirmLabel="Excluir"
+        loading={deleteProduct.isPending}
+      />
     </div>
   );
 }

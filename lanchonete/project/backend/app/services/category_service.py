@@ -43,10 +43,10 @@ class CategoryService:
     @staticmethod
     def delete(db: Session, category_id: int) -> None:
         cat = CategoryService.get_or_404(db, category_id)
-        if cat.products:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Categoria possui produtos vinculados — desative-a em vez de deletar",
-            )
+        
+        # Desvincula produtos automaticamente
+        from app.models.product import Product
+        db.query(Product).filter(Product.category_id == category_id).update({Product.category_id: None})
+        
         db.delete(cat)
         db.commit()

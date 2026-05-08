@@ -70,7 +70,7 @@ class OrderUpdate(AppModel):
 
 class OrderItemOptionPublic(AppModel):
     id: int
-    option_item_id: int
+    option_item_id: int | None  # nullable: opção pode ter sido excluída
     name: str
     price_adjustment: Decimal
     quantity: int
@@ -92,6 +92,7 @@ class OrderPublic(AppModel):
     status: OrderStatus
     order_type: OrderType
     total: Decimal
+    delivery_fee: Decimal = Decimal("0")
     notes: str | None
     customer_name: str
     customer_phone: str | None
@@ -101,7 +102,7 @@ class OrderPublic(AppModel):
     is_edited: bool
     edit_note: str | None
     created_at: datetime
-    updated_at: datetime
+    updated_at: datetime | None = None
 
 
 class OrderList(AppModel):
@@ -109,6 +110,7 @@ class OrderList(AppModel):
     status: OrderStatus
     order_type: OrderType
     total: Decimal
+    delivery_fee: Decimal = Decimal("0")
     notes: str | None
     customer_name: str
     payment_method: PaymentMethod

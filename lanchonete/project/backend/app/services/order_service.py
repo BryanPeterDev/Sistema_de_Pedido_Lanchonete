@@ -83,6 +83,20 @@ class OrderService:
             payment_method=payload.payment_method,
             items=items,
         )
+
+        # Calcula a taxa de entrega: produto cujo nome contém "taxa"
+        delivery_fee_total = Decimal("0")
+        for item_in in payload.items:
+            prod = ProductService.get_or_404(db, item_in.product_id)
+            if "taxa" in prod.name.lower():
+                active_price = (
+                    prod.promotional_price
+                    if ProductService.is_promotion_active(prod)
+                    else prod.price
+                )
+                delivery_fee_total += active_price * item_in.quantity
+        order.delivery_fee = delivery_fee_total
+
         db.add(order)
         db.flush()
 
@@ -261,6 +275,12 @@ class OrderService:
             )
 
         order.status = payload.status
+
+        # Registra timestamps operacionais
+        if payload.status == OrderStatus.pronto and order.prepared_at is None:
+            order.prepared_at = datetime.now(UTC)
+        if payload.status == OrderStatus.entregue and order.delivered_at is None:
+            order.delivered_at = datetime.now(UTC)
 
         # Sincroniza com a entrega se houver
         if order.delivery:

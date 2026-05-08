@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
-import { Button, Input, Modal, Spinner, EmptyState } from "@/components/ui";
+import { Button, Input, Modal, Spinner, EmptyState, ConfirmModal } from "@/components/ui";
 import toast from "react-hot-toast";
 import type { Category } from "@/types";
 
@@ -19,6 +19,7 @@ export default function AdminCategoriasPage() {
   const { data: categories, isLoading } = useAdminCategories();
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
+  const [deletingCat, setDeletingCat] = useState<{ id: number; name: string } | null>(null);
   const [form, setForm] = useState({ name: "", description: "" });
 
   const createMut = useMutation({
@@ -35,7 +36,7 @@ export default function AdminCategoriasPage() {
 
   const deleteMut = useMutation({
     mutationFn: (id: number) => api.delete(`/categories/${id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["categories"] }); toast.success("Removido!"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["categories"] }); toast.success("Removido!"); setDeletingCat(null); },
     onError: (err: any) => toast.error(err?.response?.data?.detail ?? "Erro"),
   });
 
@@ -63,7 +64,7 @@ export default function AdminCategoriasPage() {
               </div>
               <div className="flex gap-1.5">
                 <button onClick={() => { setEditing(cat); setForm({ name: cat.name, description: cat.description ?? "" }); }} className="p-2 rounded-xl hover:bg-surface-100 text-surface-800 transition-colors"><Pencil size={15} /></button>
-                <button onClick={() => deleteMut.mutate(cat.id)} className="p-2 rounded-xl hover:bg-red-50 text-red-400 transition-colors"><Trash2 size={15} /></button>
+                <button onClick={() => setDeletingCat({ id: cat.id, name: cat.name })} className="p-2 rounded-xl hover:bg-red-50 text-red-400 transition-colors"><Trash2 size={15} /></button>
               </div>
             </div>
           ))}
@@ -85,6 +86,16 @@ export default function AdminCategoriasPage() {
           <Button type="submit" loading={updateMut.isPending} className="w-full">Salvar</Button>
         </form>
       </Modal>
+
+      <ConfirmModal 
+        open={!!deletingCat} 
+        onClose={() => setDeletingCat(null)} 
+        onConfirm={() => deletingCat && deleteMut.mutate(deletingCat.id)}
+        title="Excluir Categoria"
+        message={`Tem certeza que deseja excluir a categoria "${deletingCat?.name}"? Esta ação não poderá ser desfeita e só funcionará se não houver produtos vinculados.`}
+        confirmLabel="Excluir"
+        loading={deleteMut.isPending}
+      />
     </div>
   );
 }

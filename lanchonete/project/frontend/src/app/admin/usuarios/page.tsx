@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, UserPlus } from "lucide-react";
 import api from "@/lib/api";
-import { Spinner, Badge, Modal, Button, Input } from "@/components/ui";
+import { Spinner, Badge, Modal, Button, Input, ConfirmModal } from "@/components/ui";
 import toast from "react-hot-toast";
 import type { User, UserRole } from "@/types";
 
@@ -26,6 +26,7 @@ export default function AdminUsuariosPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [newUser, setNewUser] = useState({ name: "", email: "", password: "", phone: "", role: "atendente" as UserRole });
   const [creating, setCreating] = useState(false);
+  const [togglingUser, setTogglingUser] = useState<{ id: number; name: string; is_active: boolean } | null>(null);
 
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ["users"],
@@ -34,7 +35,7 @@ export default function AdminUsuariosPage() {
 
   const toggleActive = useMutation({
     mutationFn: (id: number) => api.post(`/users/${id}/toggle-active`).then((r) => r.data),
-    onSuccess: (u: User) => { qc.invalidateQueries({ queryKey: ["users"] }); toast.success(u.is_active ? "Usuário ativado" : "Usuário desativado"); },
+    onSuccess: (u: User) => { qc.invalidateQueries({ queryKey: ["users"] }); toast.success(u.is_active ? "Usuário ativado" : "Usuário excluído"); setTogglingUser(null); },
   });
 
   const updateRole = useMutation({
@@ -100,8 +101,8 @@ export default function AdminUsuariosPage() {
                     <Badge variant={user.is_active ? "success" : "default"}>{user.is_active ? "Ativo" : "Inativo"}</Badge>
                   </td>
                   <td className="px-5 py-4">
-                    <button onClick={() => toggleActive.mutate(user.id)} className={`px-3 py-1.5 rounded-xl text-xs font-semibold font-body border transition-colors ${user.is_active ? "border-red-200 text-red-500 hover:bg-red-50" : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"}`}>
-                      {user.is_active ? "Desativar" : "Ativar"}
+                    <button onClick={() => setTogglingUser({ id: user.id, name: user.name, is_active: user.is_active })} className={`px-3 py-1.5 rounded-xl text-xs font-semibold font-body border transition-colors ${user.is_active ? "border-red-200 text-red-500 hover:bg-red-50" : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"}`}>
+                      {user.is_active ? "Excluir" : "Ativar"}
                     </button>
                   </td>
                 </tr>
@@ -131,6 +132,20 @@ export default function AdminUsuariosPage() {
           <Button type="submit" loading={creating} className="w-full">Criar funcionário</Button>
         </form>
       </Modal>
+
+      <ConfirmModal 
+        open={!!togglingUser} 
+        onClose={() => setTogglingUser(null)} 
+        onConfirm={() => togglingUser && toggleActive.mutate(togglingUser.id)}
+        title={togglingUser?.is_active ? "Excluir Funcionário" : "Ativar Funcionário"}
+        message={togglingUser?.is_active 
+          ? `Tem certeza que deseja excluir o funcionário "${togglingUser?.name}"? Ele não conseguirá mais acessar o sistema.` 
+          : `Deseja ativar o acesso do funcionário "${togglingUser?.name}" ao sistema?`
+        }
+        variant={togglingUser?.is_active ? "danger" : "info"}
+        confirmLabel={togglingUser?.is_active ? "Excluir" : "Ativar"}
+        loading={toggleActive.isPending}
+      />
     </div>
   );
 }

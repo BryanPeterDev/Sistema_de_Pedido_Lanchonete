@@ -1,4 +1,5 @@
 from app.api.v1 import (
+    analytics,
     auth,
     categories,
     chat,
@@ -22,3 +23,4 @@ router.include_router(users.router, prefix="/users", tags=["users"])
 router.include_router(chat.router, prefix="/chat", tags=["chat"])
 router.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
 router.include_router(websockets.router, prefix="/ws", tags=["websockets"])
+router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])

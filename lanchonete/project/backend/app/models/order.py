@@ -1,9 +1,10 @@
 import enum
+from datetime import datetime
 from decimal import Decimal
 
 from app.core.database import Base
 from app.models.base import TimestampMixin
-from sqlalchemy import Enum, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -81,6 +82,13 @@ class Order(TimestampMixin, Base):
     customer_address: Mapped[str | None] = mapped_column(
         String(500)
     )  # obrigatório apenas para delivery
+
+    # ── Taxa de entrega (extraída dos itens na criação do pedido) ────────────
+    delivery_fee: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=0, server_default="0")
+
+    # ── Timestamps operacionais ───────────────────────────────────────────────
+    prepared_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # ── FK — quem criou o pedido (atendente/admin) ────────────
     created_by_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)

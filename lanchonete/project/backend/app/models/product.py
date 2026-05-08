@@ -34,7 +34,9 @@ class Product(TimestampMixin, Base):
     stock_alert_threshold: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
 
     # ── FK ────────────────────────────────────────────────────
-    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"), nullable=False)
+    category_id: Mapped[int | None] = mapped_column(
+        ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
+    )
 
     # ── Relacionamentos ───────────────────────────────────────
     category: Mapped["Category"] = relationship(back_populates="products", lazy="joined")  # noqa: F821
