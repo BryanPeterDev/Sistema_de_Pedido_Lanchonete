@@ -35,12 +35,19 @@ def list_orders(
     db: Db,
     current_user: CurrentUser,
     order_status: OrderStatus | None = Query(default=None),
+    only_current_register: bool = Query(default=False),
+    register_id: int | None = Query(default=None),
 ):
     """
-    Lista pedidos com filtro opcional de status.
+    Lista pedidos com filtro opcional de status, caixa atual ou caixa específico.
     Acessível por admin, atendente, cozinha e motoboy.
     """
-    return OrderService.list_orders(db, status_filter=order_status)
+    return OrderService.list_orders(
+        db, 
+        status_filter=order_status, 
+        only_current_register=only_current_register,
+        register_id=register_id
+    )
 
 
 @router.get("/{order_id}", response_model=OrderPublic)

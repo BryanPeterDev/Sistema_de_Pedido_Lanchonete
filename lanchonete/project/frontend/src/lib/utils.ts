@@ -2,7 +2,17 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import type { OrderStatus, OrderType } from "@/types";
+import type { OrderStatus, OrderType, Promotion } from "@/types";
+
+export function getActivePrice(id: number, basePrice: string | number, activePromotions: Promotion[], type: "product" | "option"): number {
+  const promo = activePromotions.find(p => type === "product" ? (p.product_id === id && !p.option_item_id) : (p.option_item_id === id));
+  if (promo) return Number(promo.discount_value);
+  return Number(basePrice);
+}
+
+export function getPromotion(id: number, activePromotions: Promotion[], type: "product" | "option"): Promotion | undefined {
+  return activePromotions.find(p => type === "product" ? (p.product_id === id && !p.option_item_id) : (p.option_item_id === id));
+}
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -56,27 +66,11 @@ export const PAYMENT_METHOD_LABEL: Record<string, string> = {
   nao_pago: "❌ Não Pago",
 };
 
-export function isPromotionActive(item: any): boolean {
-  if (!item?.is_promotional || item?.promotional_price === null || item?.promotional_price === undefined) {
-    return false;
-  }
-
-  if (!item.promotion_active_days) {
-    return true;
-  }
-
-  // Converte dia da semana JS (0=Dom) para padrão Python (0=Seg)
-  const jsDay = new Date().getDay();
-  const pyWeekday = (jsDay + 6) % 7;
-
-  const activeDays = item.promotion_active_days.split(",");
-  return activeDays.includes(String(pyWeekday));
-}
 
 export function getImageUrl(imagePath?: string | null): string | null {
   if (!imagePath) return null;
   if (imagePath.startsWith("http")) return imagePath;
-  
+
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
   const baseUrl = apiUrl.replace("/api/v1", "");
   return `${baseUrl}/ImagensProdutos/${imagePath}`;

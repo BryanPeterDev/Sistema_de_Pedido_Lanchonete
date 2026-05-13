@@ -3,13 +3,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import type { Product, Category } from "@/types";
 
-export function useProducts(categoryId?: number) {
+export function useProducts(categoryId?: number, onlyVisible?: boolean) {
   return useQuery<Product[]>({
-    queryKey: ["products", categoryId],
+    queryKey: ["products", categoryId, onlyVisible],
     queryFn: async () => {
-      const { data } = await api.get("/products", {
-        params: categoryId ? { category_id: categoryId } : {},
-      });
+      const params: any = {};
+      if (categoryId !== undefined) params.category_id = categoryId;
+      if (onlyVisible !== undefined) params.only_visible = onlyVisible;
+
+      const { data } = await api.get("/products", { params });
       return data;
     },
   });

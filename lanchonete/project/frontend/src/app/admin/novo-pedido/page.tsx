@@ -1,10 +1,11 @@
 "use client";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, Plus, Minus, Trash2, ShoppingBag, MapPin, Phone, User, StickyNote, AlertTriangle, Zap } from "lucide-react";
+import { Search, Plus, Minus, Trash2, ShoppingBag, MapPin, Phone, User, StickyNote, AlertTriangle } from "lucide-react";
 import { useProducts, useCategories } from "@/hooks/useProducts";
+import { useActivePromotions } from "@/hooks/usePromotions";
 import { useCreateOrder, useUpdateOrder, useOrder } from "@/hooks/useOrders";
-import { formatCurrency, cn, isPromotionActive, getImageUrl } from "@/lib/utils";
+import { formatCurrency, cn, getImageUrl, getActivePrice, getPromotion } from "@/lib/utils";
 import { Spinner, Button, Modal, ConfirmModal } from "@/components/ui";
 import toast from "react-hot-toast";
 import type { Product, OrderType, PaymentMethod, ProductOptionItem, ProductOptionGroup } from "@/types";
@@ -19,15 +20,15 @@ interface LocalCartItem {
 }
 
 const ORDER_TYPES: { value: OrderType; label: string; icon: string }[] = [
-  { value: "local",    label: "No local",  icon: "🍽️" },
-  { value: "retirada", label: "Retirada",  icon: "🏪" },
-  { value: "delivery", label: "Delivery",  icon: "🛵" },
+  { value: "local", label: "No local", icon: "🍽️" },
+  { value: "retirada", label: "Retirada", icon: "🏪" },
+  { value: "delivery", label: "Delivery", icon: "🛵" },
 ];
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: "dinheiro", label: "💵 Dinheiro" },
-  { value: "pix",     label: "📱 Pix" },
-  { value: "cartao",  label: "💳 Cartão" },
+  { value: "pix", label: "📱 Pix" },
+  { value: "cartao", label: "💳 Cartão" },
 ];
 
 export default function AdminNovoPedidoPageWrapper() {
@@ -56,7 +57,8 @@ function AdminNovoPedidoPage() {
   const [editNote, setEditNote] = useState("");
 
   const { data: categories } = useCategories();
-  const { data: products, isLoading } = useProducts(selectedCategory);
+  const { data: products, isLoading } = useProducts(selectedCategory, false, true);
+  const { data: promotions = [] } = useActivePromotions();
   const createOrder = useCreateOrder();
   const updateOrder = useUpdateOrder();
 
@@ -68,7 +70,7 @@ function AdminNovoPedidoPage() {
       setOrderType(orderToEdit.order_type);
       setPaymentMethod(orderToEdit.payment_method);
       setNotes(orderToEdit.notes || "");
-      
+
       const newCart = orderToEdit.items.map(item => {
         const optionsTotal = item.selected_options?.reduce((acc, opt) => acc + Number(opt.price_adjustment), 0) || 0;
         const basePrice = Number(item.unit_price) - optionsTotal;
@@ -78,7 +80,6 @@ function AdminNovoPedidoPage() {
           product: {
             ...item.product,
             price: basePrice,
-            is_promotional: false
           },
           quantity: item.quantity,
           notes: item.notes || undefined,
@@ -98,7 +99,7 @@ function AdminNovoPedidoPage() {
   const allFiltered = products?.filter((p) =>
     p.is_available &&
     (p.name.toLowerCase().includes(search.toLowerCase()) ||
-     p.description?.toLowerCase().includes(search.toLowerCase()))
+      p.description?.toLowerCase().includes(search.toLowerCase()))
   );
 
   const regularProducts = allFiltered?.filter((p) => !p.name.toLowerCase().includes("taxa"));
@@ -113,7 +114,7 @@ function AdminNovoPedidoPage() {
       setOptionSelections({});
       return;
     }
-    
+
     setCart((prev) => {
       const existing = prev.find((i) => i.product.id === product.id && (!i.selected_options || i.selected_options.length === 0));
       if (existing) {
@@ -127,13 +128,13 @@ function AdminNovoPedidoPage() {
 
   function confirmAddToCartWithOptions() {
     if (!selectedProductForOptions) return;
-    
+
     // Validate required groups
     for (const group of selectedProductForOptions.option_groups) {
       const selections = optionSelections[group.id] || {};
       const totalSelected = Object.values(selections).reduce((a, b) => a + b, 0);
       const effectiveMax = getEffectiveMax(group);
-      
+
       if (group.is_required && totalSelected < group.min_selections) {
         toast.error(`Selecione ao menos ${group.min_selections} em ${group.name}`);
         return;
@@ -143,7 +144,7 @@ function AdminNovoPedidoPage() {
         return;
       }
     }
-    
+
     const selectedOptionsDetails: { option_item_id: number; name: string; price_adjustment: number; quantity: number }[] = [];
     for (const group of selectedProductForOptions.option_groups) {
       const selections = optionSelections[group.id] || {};
@@ -161,17 +162,17 @@ function AdminNovoPedidoPage() {
         }
       }
     }
-    
+
     setCart(prev => [
-      ...prev, 
-      { 
-        cartId: Math.random().toString(36).substring(7), 
-        product: selectedProductForOptions, 
-        quantity: 1, 
-        selected_options: selectedOptionsDetails 
+      ...prev,
+      {
+        cartId: Math.random().toString(36).substring(7),
+        product: selectedProductForOptions,
+        quantity: 1,
+        selected_options: selectedOptionsDetails
       }
     ]);
-    
+
     setSelectedProductForOptions(null);
     setOptionSelections({});
   }
@@ -203,10 +204,11 @@ function AdminNovoPedidoPage() {
   }
 
   const total = cart.reduce((sum, i) => {
-    const activePrice = i.product.is_promotional && i.product.promotional_price 
-      ? Number(i.product.promotional_price) 
-      : Number(i.product.price || 0);
-    const optionsPrice = i.selected_options?.reduce((optSum, opt) => optSum + (Number(opt.price_adjustment) * (opt.quantity || 1)), 0) || 0;
+    const activePrice = getActivePrice(i.product.id, i.product.price, promotions, "product");
+    const optionsPrice = i.selected_options?.reduce((optSum, opt) => {
+      const activeOptPrice = getActivePrice(opt.option_item_id, opt.price_adjustment, promotions, "option");
+      return optSum + (activeOptPrice * (opt.quantity || 1));
+    }, 0) || 0;
     return sum + (isNaN(activePrice) ? 0 : activePrice + optionsPrice) * i.quantity;
   }, 0);
 
@@ -223,7 +225,7 @@ function AdminNovoPedidoPage() {
         product_id: i.product.id,
         quantity: i.quantity,
         notes: i.notes?.trim() || undefined,
-        selected_options: i.selected_options?.map(opt => ({ 
+        selected_options: i.selected_options?.map(opt => ({
           option_item_id: opt.option_item_id,
           quantity: opt.quantity || 1
         }))
@@ -263,7 +265,7 @@ function AdminNovoPedidoPage() {
         if (selections[optId] > 0) {
           const opt = sourceGroup.options.find(o => o.id === Number(optId));
           if (opt && opt.target_group_id === group.id && opt.target_max_value !== null && opt.target_max_value !== undefined) {
-             override = opt.target_max_value;
+            override = opt.target_max_value;
           }
         }
       }
@@ -337,7 +339,7 @@ function AdminNovoPedidoPage() {
                       )}
                     >
                       <div className="flex items-start gap-3">
-                        <div className="w-14 h-14 rounded-xl bg-surface-50 flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden">
+                        <div className="w-14 h-14 rounded-xl bg-surface-50 flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden text-surface-400">
                           {(product.image_path || product.image_url) ? (
                             <img src={getImageUrl(product.image_path || product.image_url) || undefined} alt="" className="w-full h-full object-cover" />
                           ) : (
@@ -347,14 +349,16 @@ function AdminNovoPedidoPage() {
                         <div className="flex-1 min-w-0">
                           <p className="font-body font-semibold text-sm text-surface-900 truncate">{product.name}</p>
                           <p className="text-xs text-surface-200 font-body mt-0.5 truncate">{product.category.name}</p>
-                          {product.is_promotional && product.promotional_price ? (
-                            <div className="mt-1">
-                              <span className="font-display text-brand-600 text-sm mr-1.5">{formatCurrency(product.promotional_price)}</span>
-                              <span className="text-[10px] text-surface-300 line-through font-body">{formatCurrency(product.price)}</span>
-                            </div>
-                          ) : (
-                            <p className="font-display text-surface-900 text-sm mt-1">{formatCurrency(product.price)}</p>
-                          )}
+                          <div className="mt-1 flex items-center gap-2">
+                            {getPromotion(product.id, promotions, "product") ? (
+                              <>
+                                <span className="font-display text-surface-300 text-xs line-through">{formatCurrency(product.price)}</span>
+                                <span className="font-display text-brand-600 text-sm">{formatCurrency(getActivePrice(product.id, product.price, promotions, "product"))}</span>
+                              </>
+                            ) : (
+                              <span className="font-display text-surface-900 text-sm">{formatCurrency(product.price)}</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       {inCart && (
@@ -387,10 +391,10 @@ function AdminNovoPedidoPage() {
                 <label className="flex items-center gap-2 text-xs font-semibold text-amber-800 font-body mb-2 uppercase tracking-wide">
                   <AlertTriangle size={14} /> Motivo da Alteração *
                 </label>
-                <textarea 
-                  placeholder="Ex: Trocou cebola, tirou refrigerante..." 
+                <textarea
+                  placeholder="Ex: Trocou cebola, tirou refrigerante..."
                   value={editNote} onChange={(e) => setEditNote(e.target.value)} rows={2}
-                  className="w-full px-3 py-2 rounded-lg border border-amber-200 bg-white font-body text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none text-amber-900" 
+                  className="w-full px-3 py-2 rounded-lg border border-amber-200 bg-white font-body text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none text-amber-900"
                 />
               </div>
             )}
@@ -541,75 +545,82 @@ function AdminNovoPedidoPage() {
               ) : (
                 <div className="space-y-2">
                   {cart.map((item) => {
-                    const activePrice = item.product.is_promotional && item.product.promotional_price ? Number(item.product.promotional_price) : Number(item.product.price);
-                    const optionsPrice = item.selected_options?.reduce((optSum, opt) => optSum + opt.price_adjustment, 0) || 0;
+                    const activePrice = getActivePrice(item.product.id, item.product.price, promotions, "product");
+                    const optionsPrice = item.selected_options?.reduce((optSum, opt) => {
+                      const optPrice = getActivePrice(opt.option_item_id, opt.price_adjustment, promotions, "option");
+                      return optSum + (optPrice * opt.quantity);
+                    }, 0) || 0;
                     const unitTotal = activePrice + optionsPrice;
-                    
+
                     return (
-                    <div key={item.cartId} className="bg-surface-50 rounded-xl p-3 space-y-2">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-body font-semibold text-surface-900 truncate">{item.product.name}</p>
-                          {item.selected_options && item.selected_options.length > 0 && (
-                            <div className="text-[11px] text-surface-500 font-body leading-tight mt-0.5">
-                              {item.selected_options.map(opt => (
-                                <div key={opt.option_item_id}>
-                                  {opt.quantity > 1 ? `${opt.quantity}x ` : "+ "}{opt.name} 
-                                  {Number(opt.price_adjustment) > 0 && ` (${formatCurrency(Number(opt.price_adjustment) * opt.quantity)})`}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          <p className="text-xs text-surface-900 font-body font-medium mt-1">
-                            {formatCurrency(unitTotal * item.quantity)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <button
-                            onClick={() => updateQty(item.cartId, -1)}
-                            className="w-7 h-7 rounded-lg bg-white border border-surface-200 flex items-center justify-center text-surface-800 hover:border-brand-400 transition-colors"
-                          >
-                            <Minus size={12} />
-                          </button>
-                          <span className="w-6 text-center text-sm font-body font-bold text-surface-900">{item.quantity}</span>
-                          <button
-                            onClick={() => updateQty(item.cartId, 1)}
-                            className="w-7 h-7 rounded-lg bg-white border border-surface-200 flex items-center justify-center text-surface-800 hover:border-brand-400 transition-colors"
-                          >
-                            <Plus size={12} />
-                          </button>
-                          <button
-                            onClick={() => toggleItemNotes(item.cartId)}
-                            className={cn(
-                              "w-7 h-7 rounded-lg flex items-center justify-center transition-colors ml-1",
-                              item.showNotes || item.notes 
-                                ? "bg-amber-100 text-amber-600" 
-                                : "text-surface-400 hover:bg-surface-200 hover:text-surface-600"
+                      <div key={item.cartId} className="bg-surface-50 rounded-xl p-3 space-y-2">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-body font-semibold text-surface-900 truncate">{item.product.name}</p>
+                            {item.selected_options && item.selected_options.length > 0 && (
+                              <div className="text-[11px] text-surface-500 font-body leading-tight mt-0.5">
+                                {item.selected_options.map(opt => {
+                                  const optPrice = getActivePrice(opt.option_item_id, opt.price_adjustment, promotions, "option");
+                                  return (
+                                    <div key={opt.option_item_id}>
+                                      {opt.quantity > 1 ? `${opt.quantity}x ` : "+ "}{opt.name}
+                                      {optPrice > 0 && ` (${formatCurrency(optPrice * opt.quantity)})`}
+                                    </div>
+                                  )
+                                })}
+                              </div>
                             )}
-                            title="Adicionar Observação"
-                          >
-                            <StickyNote size={12} />
-                          </button>
+                            <p className="text-xs text-surface-900 font-body font-medium mt-1">
+                              {formatCurrency(unitTotal * item.quantity)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <button
+                              onClick={() => updateQty(item.cartId, -1)}
+                              className="w-7 h-7 rounded-lg bg-white border border-surface-200 flex items-center justify-center text-surface-800 hover:border-brand-400 transition-colors"
+                            >
+                              <Minus size={12} />
+                            </button>
+                            <span className="w-6 text-center text-sm font-body font-bold text-surface-900">{item.quantity}</span>
+                            <button
+                              onClick={() => updateQty(item.cartId, 1)}
+                              className="w-7 h-7 rounded-lg bg-white border border-surface-200 flex items-center justify-center text-surface-800 hover:border-brand-400 transition-colors"
+                            >
+                              <Plus size={12} />
+                            </button>
+                            <button
+                              onClick={() => toggleItemNotes(item.cartId)}
+                              className={cn(
+                                "w-7 h-7 rounded-lg flex items-center justify-center transition-colors ml-1",
+                                item.showNotes || item.notes
+                                  ? "bg-amber-100 text-amber-600"
+                                  : "text-surface-400 hover:bg-surface-200 hover:text-surface-600"
+                              )}
+                              title="Adicionar Observação"
+                            >
+                              <StickyNote size={12} />
+                            </button>
                             <button
                               onClick={() => removeFromCart(item.cartId)}
                               className="w-7 h-7 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 transition-colors"
                             >
                               <Trash2 size={12} />
                             </button>
+                          </div>
                         </div>
+                        {/* Item Notes */}
+                        {(item.showNotes || item.notes) && (
+                          <input
+                            placeholder="Obs. do produto (ex: sem cebola)"
+                            value={item.notes || ""}
+                            onChange={(e) => updateItemNotes(item.cartId, e.target.value)}
+                            className="w-full px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50/50 font-body text-[11px] focus:outline-none focus:ring-1 focus:ring-amber-400 transition-all text-amber-900 placeholder:text-amber-700/50"
+                            autoFocus
+                          />
+                        )}
                       </div>
-                      {/* Item Notes */}
-                      {(item.showNotes || item.notes) && (
-                        <input
-                          placeholder="Obs. do produto (ex: sem cebola)"
-                          value={item.notes || ""}
-                          onChange={(e) => updateItemNotes(item.cartId, e.target.value)}
-                          className="w-full px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50/50 font-body text-[11px] focus:outline-none focus:ring-1 focus:ring-amber-400 transition-all text-amber-900 placeholder:text-amber-700/50"
-                          autoFocus
-                        />
-                      )}
-                    </div>
-                  )})}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -646,7 +657,7 @@ function AdminNovoPedidoPage() {
                 const totalInGroup = Object.values(selections).reduce((a, b) => a + b, 0);
                 const effectiveMax = getEffectiveMax(group);
                 const isOverridden = effectiveMax !== group.max_selections;
-                
+
                 return (
                   <div key={group.id} className="space-y-3">
                     <div className="flex justify-between items-end">
@@ -660,34 +671,31 @@ function AdminNovoPedidoPage() {
                         {isOverridden && " ✨"}
                       </span>
                     </div>
-                    
+
                     <div className="grid gap-2">
                       {group.options.map((opt) => {
                         const qty = selections[opt.id] || 0;
                         const isSelected = qty > 0;
-                        
+
                         return (
                           <div
                             key={opt.id}
                             className={cn(
                               "flex justify-between items-center p-3 rounded-xl border transition-all",
-                              isSelected 
-                                ? "border-brand-500 bg-brand-50 shadow-sm" 
+                              isSelected
+                                ? "border-brand-500 bg-brand-50 shadow-sm"
                                 : "border-surface-200 bg-white hover:border-brand-300"
                             )}
                           >
                             <div className="flex-1 min-w-0 pr-4">
-                              <span className={cn("font-body text-sm font-medium block truncate", isSelected ? "text-brand-700" : "text-surface-700")}>
-                                {opt.name}
-                              </span>
-                              {Number(opt.price_adjustment) > 0 && (
+                              <span className={cn("font-body text-sm font-medium block truncate", isSelected ? "text-brand-700" : "text-surface-700")}>{opt.name}</span>
+                              {getActivePrice(opt.id, opt.price_adjustment, promotions, "option") > 0 && (
                                 <div className="flex items-center gap-2">
-                                  {isPromotionActive(opt) ? (
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-[10px] font-bold text-amber-600 font-body">{formatCurrency(opt.promotional_price || 0)}</span>
-                                      <span className="text-[9px] text-surface-300 line-through font-body">{formatCurrency(opt.price_adjustment)}</span>
-                                      <Zap size={10} className="text-amber-500 fill-current" />
-                                    </div>
+                                  {getPromotion(opt.id, promotions, "option") ? (
+                                    <>
+                                      <span className="text-[10px] text-surface-300 font-body line-through">+{formatCurrency(opt.price_adjustment)}</span>
+                                      <span className="text-[10px] text-brand-600 font-body font-bold">+{formatCurrency(getActivePrice(opt.id, opt.price_adjustment, promotions, "option"))}</span>
+                                    </>
                                   ) : (
                                     <span className="text-[10px] text-surface-400 font-body">+{formatCurrency(opt.price_adjustment)}</span>
                                   )}
@@ -752,8 +760,8 @@ function AdminNovoPedidoPage() {
                                     }}
                                     className={cn(
                                       "w-7 h-7 rounded-lg flex items-center justify-center transition-colors border",
-                                      isSelected 
-                                        ? "bg-brand-500 border-brand-500 text-white" 
+                                      isSelected
+                                        ? "bg-brand-500 border-brand-500 text-white"
                                         : "bg-white border-surface-200 text-surface-800 hover:border-brand-400"
                                     )}
                                   >

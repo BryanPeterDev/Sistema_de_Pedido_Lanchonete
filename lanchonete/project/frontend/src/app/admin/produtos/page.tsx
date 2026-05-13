@@ -1,21 +1,12 @@
 "use client";
 import { useState } from "react";
-import { Plus, Pencil, Trash2, AlertTriangle, Zap } from "lucide-react";
+import { Plus, Pencil, Trash2, AlertTriangle, Copy, Eye, EyeOff } from "lucide-react";
 import { useProducts, useCategories, useCreateProduct, useUpdateProduct, useDeleteProduct } from "@/hooks/useProducts";
 import { formatCurrency, cn, getImageUrl } from "@/lib/utils";
 import { Spinner, Modal, Button, Input, EmptyState, ConfirmModal } from "@/components/ui";
 import toast from "react-hot-toast";
 import type { Product } from "@/types";
 
-const DAYS = [
-  { label: "Seg", value: "0" },
-  { label: "Ter", value: "1" },
-  { label: "Qua", value: "2" },
-  { label: "Qui", value: "3" },
-  { label: "Sex", value: "4" },
-  { label: "Sab", value: "5" },
-  { label: "Dom", value: "6" },
-];
 
 function ProductForm({
   initial,
@@ -36,9 +27,7 @@ function ProductForm({
     image_path: initial?.image_path ?? "",
     category_id: initial?.category?.id ?? categories[0]?.id ?? 0,
     is_available: initial?.is_available ?? true,
-    is_promotional: initial?.is_promotional ?? false,
-    promotional_price: initial?.promotional_price ?? "",
-    promotion_active_days: initial?.promotion_active_days ?? "0,1,2,3,4,5,6",
+    is_visible: initial?.is_visible ?? true,
     option_groups: initial?.option_groups ?? [],
   });
 
@@ -47,7 +36,7 @@ function ProductForm({
 
   const addGroup = () => {
     setForm(f => ({
-      ...f, 
+      ...f,
       option_groups: [...f.option_groups, { id: Date.now(), name: "", option_type: "single", is_required: false, min_selections: 1, max_selections: 1, options: [] }]
     }));
   };
@@ -109,70 +98,7 @@ function ProductForm({
           </select>
         </div>
       </div>
-      
-      {/* Promotional Pricing */}
-      <div className="p-4 rounded-2xl border border-surface-100 bg-surface-50/50 space-y-3">
-        <label className="flex items-center justify-between cursor-pointer group">
-          <span className="text-sm font-semibold text-surface-800 font-body">Ativar Promoção para este produto</span>
-          <div className="relative inline-flex items-center">
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={form.is_promotional}
-              onChange={(e) => setForm((f) => ({ ...f, is_promotional: e.target.checked }))}
-            />
-            <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-brand-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-surface-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
-          </div>
-        </label>
-        
-        {form.is_promotional && (
-          <div className="animate-fade-up space-y-3">
-            <Input 
-              label="Preço Promocional (R$)" 
-              type="number" 
-              step="0.01" 
-              min="0" 
-              value={form.promotional_price} 
-              onChange={set("promotional_price")} 
-            />
-            
-            <div>
-              <label className="text-[11px] font-bold text-surface-400 uppercase tracking-wider block mb-2">Dias da semana ativos</label>
-              <div className="flex flex-wrap gap-2">
-                {DAYS.map(day => {
-                  const activeDays = form.promotion_active_days?.split(",") || [];
-                  const isActive = activeDays.includes(day.value);
-                  
-                  return (
-                    <button
-                      key={day.value}
-                      type="button"
-                      onClick={() => {
-                        let newDays;
-                        if (isActive) {
-                          newDays = activeDays.filter((d: string) => d !== day.value);
-                        } else {
-                          newDays = [...activeDays, day.value];
-                        }
-                        setForm(f => ({ ...f, promotion_active_days: newDays.sort().join(",") }));
-                      }}
-                      className={cn(
-                        "w-9 h-9 rounded-xl text-xs font-bold transition-all border",
-                        isActive 
-                          ? "bg-brand-500 border-brand-500 text-white shadow-sm shadow-brand-200" 
-                          : "bg-white border-surface-200 text-surface-500 hover:border-brand-300"
-                      )}
-                    >
-                      {day.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="text-[10px] text-surface-400 mt-2 italic">A promoção só será aplicada automaticamente nestes dias.</p>
-            </div>
-          </div>
-        )}
-      </div>
+
 
       {/* Product Options */}
       <div className="p-4 rounded-2xl border border-surface-100 bg-surface-50/50 space-y-4">
@@ -180,7 +106,7 @@ function ProductForm({
           <h3 className="font-semibold text-surface-900 font-body">Grupos de Opções (Adicionais, Variações)</h3>
           <Button type="button" variant="secondary" size="sm" onClick={addGroup}><Plus size={14} className="mr-1" /> Grupo</Button>
         </div>
-        
+
         {form.option_groups.map((group, gIdx) => (
           <div key={gIdx} className="p-3 bg-white border border-surface-200 rounded-xl space-y-3">
             <div className="flex justify-between items-start gap-2">
@@ -193,7 +119,7 @@ function ProductForm({
               </div>
               <button type="button" onClick={() => removeGroup(gIdx)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-md"><Trash2 size={16} /></button>
             </div>
-            
+
             <div className="flex items-center gap-4 text-sm font-body">
               <label className="flex items-center gap-1.5"><input type="checkbox" checked={group.is_required} onChange={e => updateGroup(gIdx, { is_required: e.target.checked })} /> Obrigatório</label>
               {group.option_type === "multiple" && (
@@ -206,68 +132,41 @@ function ProductForm({
 
             <div className="pl-4 border-l-2 border-brand-100 space-y-2 mt-2">
               {group.options.map((opt, oIdx) => (
-                  <div key={oIdx} className="flex-1 space-y-2 p-2 bg-surface-50/50 rounded-xl border border-surface-100">
-                    <div className="flex items-center gap-2">
-                      <input placeholder="Opção (ex: Médio)" value={opt.name} onChange={e => updateOption(gIdx, oIdx, { name: e.target.value })} className="flex-1 px-2 py-1 border rounded text-sm bg-white" required />
-                      <input type="number" step="0.01" placeholder="R$" value={opt.price_adjustment} onChange={e => updateOption(gIdx, oIdx, { price_adjustment: Number(e.target.value) })} className="w-16 px-2 py-1 border rounded text-sm bg-white" />
-                      
-                      <button 
-                        type="button" 
-                        onClick={() => updateOption(gIdx, oIdx, { is_promotional: !opt.is_promotional })}
-                        className={cn(
-                          "w-8 h-8 flex items-center justify-center rounded-lg transition-all border",
-                          opt.is_promotional 
-                            ? "bg-amber-100 border-amber-200 text-amber-600 shadow-sm" 
-                            : "bg-white border-surface-200 text-surface-400 hover:border-brand-300"
-                        )}
-                        title="Ativar promoção para esta opção"
-                      >
-                        <Zap size={14} className={opt.is_promotional ? "fill-current" : ""} />
-                      </button>
-                      <button type="button" onClick={() => removeOption(gIdx, oIdx)} className="text-red-400 p-1 hover:bg-red-50 rounded-md transition-colors"><Trash2 size={14} /></button>
-                    </div>
-                    {opt.is_promotional && (
-                      <div className="flex items-center gap-2 pl-2 animate-fade-up">
-                        <span className="text-[10px] font-bold text-amber-600 uppercase tracking-tight">Promo R$:</span>
-                        <input 
-                          type="number" 
-                          step="0.01" 
-                          placeholder="0.00" 
-                          value={opt.promotional_price || ""} 
-                          onChange={e => updateOption(gIdx, oIdx, { promotional_price: Number(e.target.value) })}
-                          className="w-16 px-2 py-1 border border-amber-200 rounded text-xs bg-white"
+                <div key={oIdx} className="flex-1 space-y-2 p-2 bg-surface-50/50 rounded-xl border border-surface-100">
+                  <div className="flex items-center gap-2">
+                    <input placeholder="Opção (ex: Médio)" value={opt.name} onChange={e => updateOption(gIdx, oIdx, { name: e.target.value })} className="flex-1 px-2 py-1 border rounded text-sm bg-white" required />
+                    <input type="number" step="0.01" placeholder="R$" value={opt.price_adjustment} onChange={e => updateOption(gIdx, oIdx, { price_adjustment: Number(e.target.value) })} className="w-16 px-2 py-1 border rounded text-sm bg-white" />
+
+                    <button type="button" onClick={() => removeOption(gIdx, oIdx)} className="text-red-400 p-1 hover:bg-red-50 rounded-md transition-colors"><Trash2 size={14} /></button>
+                  </div>
+
+                  <div className="flex items-center gap-2 pl-2">
+                    <span className="text-[10px] font-bold text-surface-300 uppercase tracking-tight">Limita:</span>
+                    <select
+                      value={opt.target_group_id || ""}
+                      onChange={e => updateOption(gIdx, oIdx, { target_group_id: e.target.value ? Number(e.target.value) : null })}
+                      className="text-[10px] px-2 py-1 border rounded bg-white flex-1"
+                    >
+                      <option value="">Nenhum grupo</option>
+                      {form.option_groups.filter((_, i) => i !== gIdx).map(otherG => (
+                        <option key={otherG.id} value={otherG.id}>{otherG.name || `Grupo s/ nome (${otherG.id})`}</option>
+                      ))}
+                    </select>
+                    {opt.target_group_id && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-surface-400">Máx:</span>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="Qtd"
+                          value={opt.target_max_value || ""}
+                          onChange={e => updateOption(gIdx, oIdx, { target_max_value: Number(e.target.value) })}
+                          className="w-10 text-[10px] px-1 py-1 border rounded bg-white"
                         />
-                        <span className="text-[10px] text-surface-400 italic">Mesmos dias do produto</span>
                       </div>
                     )}
-                    
-                    <div className="flex items-center gap-2 pl-2">
-                      <span className="text-[10px] font-bold text-surface-300 uppercase tracking-tight">Limita:</span>
-                      <select 
-                        value={opt.target_group_id || ""} 
-                        onChange={e => updateOption(gIdx, oIdx, { target_group_id: e.target.value ? Number(e.target.value) : null })}
-                        className="text-[10px] px-2 py-1 border rounded bg-white flex-1"
-                      >
-                        <option value="">Nenhum grupo</option>
-                        {form.option_groups.filter((_, i) => i !== gIdx).map(otherG => (
-                          <option key={otherG.id} value={otherG.id}>{otherG.name || `Grupo s/ nome (${otherG.id})`}</option>
-                        ))}
-                      </select>
-                      {opt.target_group_id && (
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-surface-400">Máx:</span>
-                          <input 
-                            type="number" 
-                            min="1" 
-                            placeholder="Qtd" 
-                            value={opt.target_max_value || ""} 
-                            onChange={e => updateOption(gIdx, oIdx, { target_max_value: Number(e.target.value) })}
-                            className="w-10 text-[10px] px-1 py-1 border rounded bg-white"
-                          />
-                        </div>
-                      )}
-                    </div>
                   </div>
+                </div>
               ))}
               <Button type="button" variant="secondary" size="sm" onClick={() => addOption(gIdx)} className="h-7 text-xs mt-1">
                 + Opção
@@ -286,7 +185,7 @@ function ProductForm({
 }
 
 export default function AdminProdutosPage() {
-  const { data: products, isLoading } = useProducts();
+  const { data: products, isLoading } = useProducts(undefined, false, false);
   const { data: categories = [] } = useCategories();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
@@ -294,15 +193,16 @@ export default function AdminProdutosPage() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [duplicating, setDuplicating] = useState<Product | null>(null);
   const [deletingId, setDeletingId] = useState<{ id: number; name: string } | null>(null);
+
+  const filteredProducts = products ?? [];
 
   async function handleCreate(data: any) {
     const payload = {
       ...data,
       price: Number(data.price),
       category_id: Number(data.category_id),
-      promotional_price: data.is_promotional && data.promotional_price ? Number(data.promotional_price) : null,
-      promotion_active_days: data.promotion_active_days,
       image_url: data.image_url || null,
       image_path: data.image_path || null,
       description: data.description || null,
@@ -312,6 +212,7 @@ export default function AdminProdutosPage() {
       await createProduct.mutateAsync(payload);
       toast.success("Produto criado!");
       setShowCreate(false);
+      setDuplicating(null);
     } catch (err: any) {
       toast.error(err?.response?.data?.detail ?? "Erro ao criar");
     }
@@ -323,8 +224,6 @@ export default function AdminProdutosPage() {
       ...data,
       price: Number(data.price),
       category_id: Number(data.category_id),
-      promotional_price: data.is_promotional && data.promotional_price ? Number(data.promotional_price) : null,
-      promotion_active_days: data.promotion_active_days,
       image_url: data.image_url || null,
       image_path: data.image_path || null,
       description: data.description || null,
@@ -339,111 +238,221 @@ export default function AdminProdutosPage() {
     }
   }
 
+  async function handleToggleAvailability(product: Product) {
+    try {
+      await updateProduct.mutateAsync({ 
+        id: product.id, 
+        data: { is_available: !product.is_available } 
+      });
+      toast.success(product.is_available ? "Ocultado do Painel de Pedidos" : "Visível no Painel de Pedidos");
+    } catch {
+      toast.error("Erro ao alterar status");
+    }
+  }
+
+  async function handleToggleVisibility(product: Product) {
+    try {
+      await updateProduct.mutateAsync({ 
+        id: product.id, 
+        data: { is_visible: !product.is_visible } 
+      });
+      toast.success(product.is_visible ? "Ocultado do Cardápio" : "Visível no Cardápio");
+    } catch {
+      toast.error("Erro ao alterar visibilidade");
+    }
+  }
+
   async function handleDelete() {
+    console.log("handleDelete called", deletingId);
     if (!deletingId) return;
     try {
       await deleteProduct.mutateAsync(deletingId.id);
-      toast.success("Produto excluído");
+      toast.success("Produto removido com sucesso!");
       setDeletingId(null);
-    } catch {
-      toast.error("Erro ao excluir");
+    } catch (err: any) {
+      toast.error("Este produto não pode ser apagado pois tem pedidos vinculados. Ele foi desativado em vez disso.");
+      setDeletingId(null);
     }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl text-surface-900">Produtos</h1>
-          <p className="text-sm text-surface-200 font-body mt-1">{products?.length ?? 0} produtos cadastrados</p>
+          <h1 className="font-display text-3xl text-surface-900">Gestão de Produtos</h1>
+          <p className="text-sm text-surface-400 font-body mt-1">Organize seu cardápio e controle a visibilidade dos itens.</p>
         </div>
-        <Button onClick={() => setShowCreate(true)}>
-          <Plus size={18} /> Novo produto
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button onClick={() => setShowCreate(true)} className="rounded-2xl shadow-brand-500/20">
+            <Plus size={18} /> Novo Produto
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
         <div className="flex justify-center py-20"><Spinner className="h-8 w-8" /></div>
-      ) : !products?.length ? (
-        <EmptyState icon="📦" title="Nenhum produto" description="Adicione o primeiro produto ao cardápio" action={<Button onClick={() => setShowCreate(true)}>Criar produto</Button>} />
+      ) : filteredProducts.length === 0 ? (
+        <EmptyState 
+          icon="📦" 
+          title="Nenhum produto cadastrado" 
+          description="Adicione seu primeiro item ao sistema."
+          action={<Button onClick={() => setShowCreate(true)}>Criar Produto</Button>}
+        />
       ) : (
-        <div className="bg-white rounded-2xl border border-surface-100 overflow-hidden">
-          <table className="w-full text-sm font-body">
-            <thead className="bg-surface-50 border-b border-surface-100">
-              <tr>
-                {["Produto", "Categoria", "Preço", "Status", ""].map((h) => (
-                  <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-surface-200 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-100">
-              {products.map((product) => (
-                <tr key={product.id} className="hover:bg-surface-50 transition-colors">
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-surface-100 flex items-center justify-center text-lg overflow-hidden flex-shrink-0">
-                        {(product.image_path || product.image_url) ? (
-                          <img src={getImageUrl(product.image_path || product.image_url) || ""} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          "🍔"
-                        )}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-surface-900">{product.name}</p>
-                          {product.is_promotional && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider">
-                              Promoção
-                            </span>
+        <div className="space-y-12">
+          {categories.map((category) => {
+            const categoryProducts = filteredProducts.filter(p => p.category?.id === category.id);
+            if (categoryProducts.length === 0) return null;
+
+            return (
+              <div key={category.id} className="space-y-5">
+                <div className="flex items-center gap-4 px-2">
+                  <h2 className="font-display text-2xl text-surface-900">{category.name}</h2>
+                  <div className="h-px flex-1 bg-surface-100" />
+                  <span className="bg-surface-50 text-surface-400 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                    {categoryProducts.length} itens
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  {categoryProducts.map((product) => (
+                    <div 
+                      key={product.id} 
+                      className={cn(
+                        "group bg-white rounded-3xl border border-surface-100 p-4 transition-all hover:shadow-xl hover:shadow-surface-900/5 hover:-translate-y-0.5",
+                        (!product.is_visible && !product.is_available) && "opacity-60 grayscale-[0.5] border-dashed"
+                      )}
+                    >
+                      <div className="flex gap-4">
+                        <div className="w-20 h-20 rounded-2xl bg-surface-50 flex items-center justify-center text-2xl overflow-hidden flex-shrink-0 border border-surface-100">
+                          {(product.image_path || product.image_url) ? (
+                            <img src={getImageUrl(product.image_path || product.image_url) || ""} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            "🍔"
                           )}
                         </div>
-                        {product.description && <p className="text-xs text-surface-200 mt-0.5 line-clamp-1">{product.description}</p>}
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <h3 className="font-display text-lg text-surface-900 truncate">{product.name}</h3>
+                              <p className="text-xl font-display text-brand-600 mt-0.5">{formatCurrency(product.price)}</p>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => setEditing(product)} className="p-2 rounded-xl hover:bg-surface-50 text-surface-400 hover:text-surface-900 transition-colors">
+                                <Pencil size={18} />
+                              </button>
+                              <button onClick={() => setDuplicating(product)} className="p-2 rounded-xl hover:bg-surface-50 text-surface-400 hover:text-brand-500 transition-colors">
+                                <Copy size={18} />
+                              </button>
+                              <button onClick={() => setDeletingId({ id: product.id, name: product.name })} className="p-2 rounded-xl hover:bg-red-50 text-surface-400 hover:text-red-500 transition-colors">
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-wrap items-center gap-2 mt-3">
+                            {/* Toggle Cardápio */}
+                            <button
+                              onClick={() => handleToggleVisibility(product)}
+                              className={cn(
+                                "flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border",
+                                product.is_visible 
+                                  ? "bg-brand-50 text-brand-700 border-brand-100" 
+                                  : "bg-surface-50 text-surface-400 border-surface-100"
+                              )}
+                            >
+                              {product.is_visible ? <Eye size={14} /> : <EyeOff size={14} />}
+                              Cardápio: {product.is_visible ? "Visível" : "Oculto"}
+                            </button>
+                            
+                            {/* Toggle Pedidos (Atendente) */}
+                            <button
+                              onClick={() => handleToggleAvailability(product)}
+                              className={cn(
+                                "flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border",
+                                product.is_available 
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-100" 
+                                  : "bg-surface-50 text-surface-400 border-surface-100"
+                              )}
+                            >
+                              <div className={cn("w-2 h-2 rounded-full", product.is_available ? "bg-emerald-500" : "bg-surface-300")} />
+                              Pedidos: {product.is_available ? "Ativo" : "Oculto"}
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </td>
-                  <td className="px-5 py-4 text-surface-800">{product.category.name}</td>
-                  <td className="px-5 py-4 font-semibold text-surface-900">
-                    {product.is_promotional && product.promotional_price ? (
-                      <div className="flex flex-col">
-                        <span className="text-brand-600">{formatCurrency(product.promotional_price)}</span>
-                        <span className="text-[10px] text-surface-300 line-through -mt-0.5">{formatCurrency(product.price)}</span>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Produtos órfãos */}
+          {(() => {
+            const categoryIds = categories.map(c => c.id);
+            const orphanProducts = filteredProducts.filter(p => !p.category || !categoryIds.includes(p.category.id));
+            if (orphanProducts.length === 0) return null;
+
+            return (
+              <div className="space-y-5 pt-4">
+                <div className="flex items-center gap-4 px-2">
+                  <div className="flex items-center gap-2 text-amber-600">
+                    <AlertTriangle size={24} />
+                    <h2 className="font-display text-2xl font-semibold">Itens sem Categoria</h2>
+                  </div>
+                  <div className="h-px flex-1 bg-amber-100" />
+                </div>
+                
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  {orphanProducts.map((product) => (
+                    <div key={product.id} className="bg-amber-50/20 rounded-3xl border border-amber-200 p-4 backdrop-blur-sm">
+                      <div className="flex gap-4">
+                        <div className="w-16 h-16 rounded-2xl bg-white border border-amber-100 flex items-center justify-center text-xl shadow-sm">🍔</div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-display text-lg text-surface-900">{product.name}</h3>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => setEditing(product)} className="p-2 rounded-xl bg-amber-500 text-white hover:bg-amber-600 transition-colors shadow-sm">
+                                <Pencil size={18} />
+                              </button>
+                              <button onClick={() => setDeletingId({ id: product.id, name: product.name })} className="p-2 rounded-xl hover:bg-red-50 text-red-500 transition-colors">
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </div>
+                          <p className="text-xs text-amber-600 font-bold mt-1 uppercase tracking-tight">⚠️ Necessário vincular a uma categoria</p>
+                        </div>
                       </div>
-                    ) : (
-                      formatCurrency(product.price)
-                    )}
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${product.is_available ? "bg-emerald-100 text-emerald-800" : "bg-surface-100 text-surface-200"}`}>
-                      {product.is_available ? "Disponível" : "Indisponível"}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-2 justify-end">
-                      <button onClick={() => setEditing(product)} className="p-1.5 rounded-lg hover:bg-surface-100 text-surface-800 transition-colors"><Pencil size={15} /></button>
-                      <button onClick={() => setDeletingId({ id: product.id, name: product.name })} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 transition-colors"><Trash2 size={15} /></button>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Novo produto">
-        <ProductForm categories={categories} onSubmit={handleCreate} loading={createProduct.isPending} />
+      <Modal open={showCreate || !!duplicating} onClose={() => { setShowCreate(false); setDuplicating(null); }} title={duplicating ? `Duplicar: ${duplicating.name}` : "Novo produto"}>
+        <ProductForm
+          initial={duplicating ? { ...duplicating, name: `${duplicating.name} (Cópia)` } : undefined}
+          categories={categories}
+          onSubmit={handleCreate}
+          loading={createProduct.isPending}
+        />
       </Modal>
       <Modal open={!!editing} onClose={() => setEditing(null)} title="Editar produto">
         {editing && <ProductForm initial={editing} categories={categories} onSubmit={handleUpdate} loading={updateProduct.isPending} />}
       </Modal>
 
-      <ConfirmModal 
-        open={!!deletingId} 
-        onClose={() => setDeletingId(null)} 
+      <ConfirmModal
+        open={!!deletingId}
+        onClose={() => setDeletingId(null)}
         onConfirm={handleDelete}
         title="Excluir Produto"
-        message={`Tem certeza que deseja excluir o produto "${deletingId?.name}"? Ele deixará de aparecer no cardápio.`}
-        confirmLabel="Excluir"
+        message={`Tem certeza que deseja remover "${deletingId?.name}"? Se houver pedidos antigos vinculados, o item será apenas arquivado (inativo).`}
+        confirmLabel="Remover Item"
         loading={deleteProduct.isPending}
       />
     </div>

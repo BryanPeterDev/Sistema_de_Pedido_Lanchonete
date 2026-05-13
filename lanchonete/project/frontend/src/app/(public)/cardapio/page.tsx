@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { useProducts, useCategories } from "@/hooks/useProducts";
+import { useActivePromotions } from "@/hooks/usePromotions";
 import ProductCard from "@/components/cardapio/ProductCard";
 import { Spinner, EmptyState } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -11,7 +12,8 @@ export default function CardapioPage() {
   const [search, setSearch] = useState("");
 
   const { data: categories, isLoading: loadingCats } = useCategories();
-  const { data: products, isLoading: loadingProds } = useProducts(selectedCategory);
+  const { data: products, isLoading: loadingProds } = useProducts(selectedCategory, true, true);
+  const { data: promotions = [] } = useActivePromotions();
 
   const filtered = products?.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -82,7 +84,7 @@ export default function CardapioPage() {
               className="animate-fade-up"
               style={{ animationDelay: `${i * 0.05}s` }}
             >
-              <ProductCard product={product} />
+              <ProductCard product={product} promotions={promotions} />
             </div>
           ))}
         </div>

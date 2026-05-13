@@ -23,12 +23,6 @@ class Product(TimestampMixin, Base):
     image_path: Mapped[str | None] = mapped_column(String(500))
     is_available: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_visible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    is_promotional: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    promotional_price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
-    promotion_active_days: Mapped[str | None] = mapped_column(
-        String(20), nullable=True, default="0,1,2,3,4,5,6"
-    )
-
     # ── Estoque ───────────────────────────────────────────────
     stock_quantity: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     stock_alert_threshold: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
@@ -91,12 +85,6 @@ class ProductOptionItem(Base):
     # Dynamic constraints: if this item is selected, override another group's max_selections
     target_group_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     target_max_value: Mapped[int | None] = mapped_column(Integer, nullable=True)
-
-    is_promotional: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    promotional_price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
-    promotion_active_days: Mapped[str | None] = mapped_column(
-        String(20), nullable=True, default="0,1,2,3,4,5,6"
-    )
 
     group: Mapped["ProductOptionGroup"] = relationship(back_populates="options")
 

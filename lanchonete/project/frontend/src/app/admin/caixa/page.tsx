@@ -88,8 +88,29 @@ export default function AdminCaixaPage() {
             <p className="text-sm font-semibold text-emerald-800 font-body mt-1">
               Valor Inicial: {formatCurrency(current.opening_cash)}
             </p>
+            
+            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-emerald-200">
+              <div>
+                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">💵 Dinheiro</p>
+                <p className="font-display text-lg text-emerald-900">{formatCurrency(current.total_dinheiro)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">📱 PIX</p>
+                <p className="font-display text-lg text-emerald-900">{formatCurrency(current.total_pix)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">💳 Cartão</p>
+                <p className="font-display text-lg text-emerald-900">{formatCurrency(current.total_cartao)}</p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between text-[11px] text-emerald-700 font-body border-t border-emerald-200/50 pt-2">
+               <span>Total em Vendas: <span className="font-bold">{formatCurrency(current.total_revenue)}</span></span>
+               <span>{current.total_orders} pedidos realizados</span>
+            </div>
+
             {current.notes && (
-              <p className="text-xs text-emerald-600 mt-1 italic">"{current.notes}"</p>
+              <p className="text-xs text-emerald-600 mt-2 italic">"{current.notes}"</p>
             )}
           </div>
         </div>

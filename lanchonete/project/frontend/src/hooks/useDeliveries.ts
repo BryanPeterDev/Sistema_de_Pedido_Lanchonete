@@ -3,10 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import type { Delivery, DeliveryStatus } from "@/types";
 
-export function useDeliveries() {
+export function useDeliveries(params?: { only_current_register?: boolean }) {
   return useQuery<Delivery[]>({
-    queryKey: ["deliveries"],
-    queryFn: () => api.get("/deliveries").then((r) => r.data),
+    queryKey: ["deliveries", params],
+    queryFn: () => api.get("/deliveries", { params }).then((r) => r.data),
   });
 }
 

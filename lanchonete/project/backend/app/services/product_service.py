@@ -16,14 +16,14 @@ class ProductService:
     def list_all(
         db: Session,
         category_id: int | None = None,
-        only_visible: bool = True,
+        only_visible: bool = False,
         only_available: bool = False,
     ) -> list[Product]:
         q = db.query(Product)
         if only_visible:
-            q = q.filter(Product.is_visible == True)  # noqa: E712
+            q = q.filter(Product.is_visible == True)
         if only_available:
-            q = q.filter(Product.is_available == True)  # noqa: E712
+            q = q.filter(Product.is_available == True)
         if category_id:
             q = q.filter(Product.category_id == category_id)
         return q.order_by(Product.name).all()
@@ -79,9 +79,6 @@ class ProductService:
                     price_adjustment=o_data.price_adjustment,
                     target_group_id=target_id,
                     target_max_value=o_data.target_max_value,
-                    is_promotional=o_data.is_promotional,
-                    promotional_price=o_data.promotional_price,
-                    promotion_active_days=o_data.promotion_active_days,
                 )
                 db.add(option)
 
@@ -147,9 +144,6 @@ class ProductService:
                     price_adjustment=o_data.price_adjustment,
                     target_group_id=target_id,
                     target_max_value=o_data.target_max_value,
-                    is_promotional=o_data.is_promotional,
-                    promotional_price=o_data.promotional_price,
-                    promotion_active_days=o_data.promotion_active_days,
                 )
                 db.add(option)
 
@@ -223,20 +217,4 @@ class ProductService:
             .all()
         )
 
-    @staticmethod
-    def is_promotion_active(item: Any) -> bool:
-        """Verifica se a promoção está ativa no momento (dia da semana)."""
-        if (
-            not getattr(item, "is_promotional", False)
-            or getattr(item, "promotional_price", None) is None
-        ):
-            return False
 
-        active_days_str = getattr(item, "promotion_active_days", None)
-        if not active_days_str:
-            return True  # Se não definiu dias, assume sempre ativa
-
-        # 0=Segunda, 6=Domingo no Python datetime.weekday()
-        today_weekday = datetime.now().weekday()
-        active_days = active_days_str.split(",")
-        return str(today_weekday) in active_days

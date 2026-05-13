@@ -3,7 +3,8 @@ import { useState } from "react";
 import { useOrders, useUpdateOrderStatus } from "@/hooks/useOrders";
 import { formatCurrency, formatDate, ORDER_STATUS_LABEL, ORDER_STATUS_COLOR, ORDER_TYPE_LABEL, ORDER_TYPE_COLOR, cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui";
-import { Pencil, AlertTriangle } from "lucide-react";
+import { Pencil, AlertTriangle, Calendar, ChevronDown } from "lucide-react";
+import { useCashRegisterHistory, useCashRegisterCurrent } from "@/hooks/useCashRegister";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import type { OrderStatus } from "@/types";
@@ -40,12 +41,19 @@ const NEXT_STATUS_LABEL: Partial<Record<OrderStatus, string>> = {
 
 export default function AtendentePedidosPage() {
   const [activeTab, setActiveTab] = useState<string>("todos");
+  const [selectedRegisterId, setSelectedRegisterId] = useState<string>("current");
+
+  const { data: currentRegister } = useCashRegisterCurrent();
+  const { data: history } = useCashRegisterHistory(20);
   
   const apiFilter = activeTab === "todos" ? undefined : 
                     (activeTab === "finalizado" || activeTab === "entregue") ? "entregue" : 
                     activeTab as OrderStatus;
 
-  const { data: fetchedOrders, isLoading } = useOrders(apiFilter);
+  const regId = selectedRegisterId === "current" ? undefined : Number(selectedRegisterId);
+  const isOnlyCurrent = selectedRegisterId === "current";
+
+  const { data: fetchedOrders, isLoading } = useOrders(apiFilter, isOnlyCurrent, regId);
   const updateStatus = useUpdateOrderStatus();
 
   const orders = fetchedOrders?.filter(o => {
@@ -82,20 +90,43 @@ export default function AtendentePedidosPage() {
         <p className="text-sm text-surface-200 font-body mt-1">Tempo real (WebSocket)</p>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-2 flex-wrap">
-        {FILTERS.map((f) => (
-          <button
-            key={String(f.value)}
-            onClick={() => setActiveTab(f.value)}
-            className={cn(
-              "px-4 py-2 rounded-xl text-sm font-semibold font-body transition-all border",
-              activeTab === f.value ? "bg-surface-950 text-white border-surface-950" : "bg-white text-surface-800 border-surface-200 hover:border-surface-800"
-            )}
-          >
-            {f.label}
-          </button>
-        ))}
+      {/* Filters & Register Select */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex gap-2 flex-wrap">
+          {FILTERS.map((f) => (
+            <button
+              key={String(f.value)}
+              onClick={() => setActiveTab(f.value)}
+              className={cn(
+                "px-4 py-2 rounded-xl text-sm font-semibold font-body transition-all border",
+                activeTab === f.value ? "bg-surface-950 text-white border-surface-950" : "bg-white text-surface-800 border-surface-200 hover:border-surface-800"
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-surface-200 shadow-sm min-w-[240px]">
+          <Calendar size={18} className="text-surface-400" />
+          <div className="flex-1 relative">
+            <select
+              value={selectedRegisterId}
+              onChange={(e) => setSelectedRegisterId(e.target.value)}
+              className="w-full bg-transparent border-none focus:ring-0 text-sm font-semibold text-surface-800 font-body appearance-none pr-8"
+            >
+              <option value="current">
+                {currentRegister ? "Caixa Atual (Aberto)" : "Histórico Geral"}
+              </option>
+              {history?.map((reg) => (
+                <option key={reg.id} value={reg.id}>
+                  Caixa #{reg.id} - {formatDate(reg.opened_at)}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-surface-400" />
+          </div>
+        </div>
       </div>
 
       {isLoading ? (
@@ -146,6 +177,18 @@ export default function AtendentePedidosPage() {
                     className="flex-shrink-0 px-3 py-1.5 rounded-xl bg-red-50 text-red-600 text-xs font-semibold font-body hover:bg-red-100 transition-colors"
                   >
                     Cancelar
+                  </button>
+                )}
+                {order.status === "entregue" && (
+                  <button
+                    onClick={() => {
+                      if(confirm("Estornar este pedido? Ele sera movido para Cancelados.")) {
+                        handleCancel(order.id);
+                      }
+                    }}
+                    className="flex-shrink-0 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-600 text-xs font-semibold font-body hover:bg-amber-100 transition-colors border border-amber-200"
+                  >
+                    Estornar
                   </button>
                 )}
               </div>

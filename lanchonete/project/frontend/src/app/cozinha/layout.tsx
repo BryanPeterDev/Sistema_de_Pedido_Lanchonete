@@ -1,7 +1,5 @@
+import MotoboyShell from "@/components/layout/MotoboyShell";
+
 export default function CozinhaLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-surface-950">
-      {children}
-    </div>
-  );
+  return <MotoboyShell mainClassName="bg-surface-950">{children}</MotoboyShell>;
 }

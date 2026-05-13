@@ -3,11 +3,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import type { Order, OrderList, OrderStatus, AttendantOrderPayload } from "@/types";
 
-export function useOrders(status?: OrderStatus) {
+export function useOrders(status?: OrderStatus, onlyCurrentRegister: boolean = false, registerId?: number) {
   return useQuery<OrderList[]>({
-    queryKey: ["orders", status],
+    queryKey: ["orders", status, onlyCurrentRegister, registerId],
     queryFn: async () => {
-      const { data } = await api.get("/orders", { params: status ? { order_status: status } : {} });
+      const params: any = {};
+      if (status) params.order_status = status;
+      if (onlyCurrentRegister) params.only_current_register = true;
+      if (registerId) params.register_id = registerId;
+      
+      const { data } = await api.get("/orders", { params });
       return data;
     },
   });

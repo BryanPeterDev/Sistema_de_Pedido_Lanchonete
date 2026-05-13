@@ -17,7 +17,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function AdminEntregasPage() {
-  const { data: deliveries, isLoading } = useDeliveries();
+  const { data: deliveries, isLoading } = useDeliveries({ only_current_register: true });
   const claimMut = useClaimDelivery();
   const updateMut = useUpdateDeliveryStatus();
 

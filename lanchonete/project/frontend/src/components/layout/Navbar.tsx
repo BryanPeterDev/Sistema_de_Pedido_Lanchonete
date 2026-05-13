@@ -10,9 +10,11 @@ export default function Navbar() {
     <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-surface-100">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
         {/* Logo */}
-        <Link href="/cardapio" className="flex items-center gap-2">
-          <span className="text-2xl">🍔</span>
-          <span className="font-display text-xl text-surface-900">Lanchonete</span>
+        <Link href="/cardapio" className="flex items-center gap-3 group">
+          <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md border border-surface-100 group-hover:scale-105 transition-transform">
+            <img src="/logo.png?v=1" alt="Logo" className="w-full h-full object-cover" />
+          </div>
+          <span className="font-display text-xl text-surface-900 font-bold tracking-tight uppercase">The Dog</span>
         </Link>
 
         {/* Nav links */}

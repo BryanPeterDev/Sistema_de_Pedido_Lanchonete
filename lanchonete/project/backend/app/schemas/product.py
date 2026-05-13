@@ -12,9 +12,6 @@ class ProductOptionItemCreate(AppModel):
     price_adjustment: Decimal = Field(default=0)
     target_group_id: int | None = None
     target_max_value: int | None = None
-    is_promotional: bool = False
-    promotional_price: Decimal | None = None
-    promotion_active_days: str | None = "0,1,2,3,4,5,6"
 
 
 class ProductOptionGroupCreate(AppModel):
@@ -35,19 +32,18 @@ class ProductCreate(AppModel):
     image_path: str | None = None
     is_available: bool = True
     is_visible: bool = True
-    is_promotional: bool = False
-    promotional_price: Decimal | None = None
-    promotion_active_days: str | None = "0,1,2,3,4,5,6"
     stock_quantity: int = Field(default=0, ge=0)
     stock_alert_threshold: int = Field(default=5, ge=0)
     category_id: int
     option_groups: list[ProductOptionGroupCreate] | None = None
 
-    @field_validator("price", "promotional_price")
+    @field_validator("price")
     @classmethod
     def validate_price(cls, v: Decimal | None) -> Decimal | None:
-        if v is not None and v.as_tuple().exponent < -2:
-            raise ValueError("Preço deve ter no máximo 2 casas decimais")
+        if v is not None:
+            exponent = v.as_tuple().exponent
+            if isinstance(exponent, int) and exponent < -2:
+                raise ValueError("Preço deve ter no máximo 2 casas decimais")
         return v
 
 
@@ -59,18 +55,17 @@ class ProductUpdate(AppModel):
     image_path: str | None = None
     is_available: bool | None = None
     is_visible: bool | None = None
-    is_promotional: bool | None = None
-    promotional_price: Decimal | None = None
-    promotion_active_days: str | None = None
     stock_alert_threshold: int | None = Field(default=None, ge=0)
     category_id: int | None = None
     option_groups: list[ProductOptionGroupCreate] | None = None
 
-    @field_validator("price", "promotional_price")
+    @field_validator("price")
     @classmethod
     def validate_price(cls, v: Decimal | None) -> Decimal | None:
-        if v is not None and v.as_tuple().exponent < -2:
-            raise ValueError("Preço deve ter no máximo 2 casas decimais")
+        if v is not None:
+            exponent = v.as_tuple().exponent
+            if isinstance(exponent, int) and exponent < -2:
+                raise ValueError("Preço deve ter no máximo 2 casas decimais")
         return v
 
 
@@ -80,9 +75,6 @@ class ProductOptionItemPublic(AppModel):
     price_adjustment: Decimal
     target_group_id: int | None
     target_max_value: int | None
-    is_promotional: bool
-    promotional_price: Decimal | None
-    promotion_active_days: str | None
 
 
 class ProductOptionGroupPublic(AppModel):
@@ -104,13 +96,10 @@ class ProductPublic(AppModel):
     image_path: str | None
     is_available: bool
     is_visible: bool
-    is_promotional: bool
-    promotional_price: Decimal | None
-    promotion_active_days: str | None
     stock_quantity: int
     stock_alert_threshold: int
     is_low_stock: bool
-    category: CategoryPublic
+    category: CategoryPublic | None = None
     option_groups: list[ProductOptionGroupPublic] = []
     created_at: datetime
 

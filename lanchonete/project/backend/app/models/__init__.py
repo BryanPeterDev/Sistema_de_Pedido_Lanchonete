@@ -13,6 +13,7 @@ from app.models.order import (
     PaymentMethod,
 )
 from app.models.product import OptionType, Product, ProductOptionGroup, ProductOptionItem
+from app.models.promotion import Promotion
 from app.models.stock_log import StockLog, StockOperation
 from app.models.user import User, UserRole
 
@@ -40,4 +41,5 @@ __all__ = [
     "ChatSession",
     "CashRegister",
     "CashRegisterStatus",
+    "Promotion",
 ]

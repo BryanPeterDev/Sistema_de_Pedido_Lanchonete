@@ -3,8 +3,11 @@ import "./globals.css";
 import Providers from "@/components/layout/Providers";
 
 export const metadata: Metadata = {
-  title: "Lanchonete",
-  description: "Peça sua comida favorita online",
+  title: "The Dog - Food Truck",
+  description: "Peça seu lanche favorito online",
+  icons: {
+    icon: "/logo.png?v=1",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -18,9 +18,10 @@ def list_products(
     db: Db,
     category_id: int | None = Query(default=None),
     only_available: bool = Query(default=False),
+    only_visible: bool = Query(default=True),
 ):
-    """Cardápio público — retorna apenas produtos visíveis."""
-    return ProductService.list_all(db, category_id=category_id, only_available=only_available)
+    """Cardápio público — retorna apenas produtos visíveis (por padrão)."""
+    return ProductService.list_all(db, category_id=category_id, only_available=only_available, only_visible=only_visible)
 
 
 @router.get("/low-stock", response_model=list[ProductPublic])

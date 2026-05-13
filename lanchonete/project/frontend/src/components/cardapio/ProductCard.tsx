@@ -1,10 +1,12 @@
 "use client";
-import { AlertCircle } from "lucide-react";
-import { formatCurrency, getImageUrl } from "@/lib/utils";
-import type { Product } from "@/types";
+import { AlertCircle, Tag } from "lucide-react";
+import { formatCurrency, getImageUrl, getActivePrice, getPromotion } from "@/lib/utils";
+import type { Product, Promotion } from "@/types";
 
-export default function ProductCard({ product }: { product: Product }) {
+export default function ProductCard({ product, promotions = [] }: { product: Product, promotions?: Promotion[] }) {
   const imageUrl = getImageUrl(product.image_path || product.image_url);
+  const promo = getPromotion(product.id, promotions, "product");
+  const activePrice = getActivePrice(product.id, product.price, promotions, "product");
 
   return (
     <div className="group bg-white rounded-3xl border border-surface-100 overflow-hidden hover:shadow-lg hover:shadow-surface-800/8 hover:-translate-y-0.5 transition-all duration-300">
@@ -19,20 +21,14 @@ export default function ProductCard({ product }: { product: Product }) {
         ) : (
           <div className="w-full h-full flex items-center justify-center text-5xl">🍔</div>
         )}
-        {!product.is_available && (
-          <div className="absolute inset-0 bg-surface-950/60 flex items-center justify-center">
-            <span className="bg-white text-surface-900 text-xs font-semibold font-body px-3 py-1.5 rounded-full flex items-center gap-1.5">
-              <AlertCircle size={12} /> Indisponível
-            </span>
-          </div>
-        )}
+
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start">
           <span className="bg-brand-500 text-white text-xs font-bold font-body px-2.5 py-1 rounded-full shadow-sm">
             {product.category.name}
           </span>
-          {product.is_promotional && (
-            <span className="bg-amber-400 text-amber-950 text-xs font-bold font-body px-2.5 py-1 rounded-full shadow-sm animate-pulse">
-              🔥 PROMOÇÃO
+          {promo && (
+            <span className="bg-emerald-500 text-white text-[10px] font-bold font-body px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1">
+              <Tag size={10} /> Promoção
             </span>
           )}
         </div>
@@ -45,10 +41,10 @@ export default function ProductCard({ product }: { product: Product }) {
           <p className="text-sm text-surface-200 font-body mt-1 line-clamp-2">{product.description}</p>
         )}
         <div className="flex items-center justify-between mt-4">
-          {product.is_promotional && product.promotional_price ? (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-display text-xl text-brand-600">{formatCurrency(product.promotional_price)}</span>
-              <span className="text-sm text-surface-200 line-through font-body">{formatCurrency(product.price)}</span>
+          {promo ? (
+            <div className="flex items-end gap-2">
+              <span className="font-display text-surface-300 text-sm line-through mb-0.5">{formatCurrency(product.price)}</span>
+              <span className="font-display text-xl text-emerald-600">{formatCurrency(activePrice)}</span>
             </div>
           ) : (
             <span className="font-display text-xl text-surface-900">{formatCurrency(product.price)}</span>

@@ -10,12 +10,21 @@ from sqlalchemy.orm import Session
 
 class DeliveryService:
     @staticmethod
-    def list_pending(db: Session, motoboy_id: int | None = None) -> list[Delivery]:
+    def list_pending(db: Session, motoboy_id: int | None = None, only_current_register: bool = False) -> list[Delivery]:
         """
         Admin/atendente: todas as entregas.
         Motoboy: pendentes (sem dono) + as suas.
         """
         q = db.query(Delivery)
+
+        if only_current_register:
+            from app.services.cash_register_service import CashRegisterService
+            current = CashRegisterService.get_current_open(db)
+            if current:
+                q = q.filter(Delivery.created_at >= current.opened_at)
+            else:
+                return []
+
         if motoboy_id:
             from sqlalchemy import or_
 

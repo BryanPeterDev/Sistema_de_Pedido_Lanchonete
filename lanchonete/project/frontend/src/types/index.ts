@@ -22,6 +22,22 @@ export type OptionType = "single" | "multiple";
 
 // ── Models ────────────────────────────────────────────────────────────────────
 
+export interface Promotion {
+  id: number;
+  name: string;
+  description: string | null;
+  product_id: number | null;
+  option_item_id: number | null;
+  discount_value: number;
+  active_days: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+
 export interface User {
   id: number;
   name: string;
@@ -46,9 +62,6 @@ export interface ProductOptionItem {
   price_adjustment: number;
   target_group_id?: number | null;
   target_max_value?: number | null;
-  is_promotional?: boolean;
-  promotional_price?: number | null;
-  promotion_active_days?: string | null;
 }
 
 export interface ProductOptionGroup {
@@ -70,9 +83,6 @@ export interface Product {
   image_path?: string | null;
   is_available?: boolean;
   is_visible?: boolean;
-  is_promotional?: boolean;
-  promotional_price?: number | null;
-  promotion_active_days?: string | null;
   stock_quantity?: number;
   stock_alert_threshold: number;
   is_low_stock: boolean;

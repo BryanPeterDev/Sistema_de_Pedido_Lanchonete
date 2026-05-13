@@ -14,6 +14,7 @@ from app.models.product import ProductOptionItem
 from app.models.user import UserRole
 from app.schemas.order import AttendantOrderCreate, OrderStatusUpdate, OrderUpdate
 from app.services.product_service import ProductService
+from app.services.promotion_service import PromotionService
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -27,14 +28,15 @@ class OrderService:
         items: list[OrderItem] = []
         total = Decimal("0")
 
+        # Busca promoções ativas
+        active_promos = PromotionService.get_active_promotions(db)
+        promo_by_product = {p.product_id: p.discount_value for p in active_promos if p.product_id and not p.option_item_id}
+        promo_by_option = {p.option_item_id: p.discount_value for p in active_promos if p.option_item_id}
+
         for item_in in payload.items:
             product = ProductService.get_or_404(db, item_in.product_id)
 
-            active_price = (
-                product.promotional_price
-                if ProductService.is_promotion_active(product)
-                else product.price
-            )
+            active_price = promo_by_product.get(product.id, product.price) or Decimal("0")
 
             option_price_adjustment = Decimal("0")
             options_to_add = []
@@ -42,11 +44,7 @@ class OrderService:
                 for opt_in in item_in.selected_options:
                     opt_item = db.get(ProductOptionItem, opt_in.option_item_id)
                     if opt_item:
-                        active_opt_price = (
-                            opt_item.promotional_price
-                            if ProductService.is_promotion_active(opt_item)
-                            else opt_item.price_adjustment
-                        )
+                        active_opt_price = promo_by_option.get(opt_item.id, opt_item.price_adjustment) or Decimal("0")
                         option_price_adjustment += active_opt_price * opt_in.quantity
                         options_to_add.append(
                             OrderItemOption(
@@ -89,12 +87,7 @@ class OrderService:
         for item_in in payload.items:
             prod = ProductService.get_or_404(db, item_in.product_id)
             if "taxa" in prod.name.lower():
-                active_price = (
-                    prod.promotional_price
-                    if ProductService.is_promotion_active(prod)
-                    else prod.price
-                )
-                delivery_fee_total += active_price * item_in.quantity
+                delivery_fee_total += prod.price * item_in.quantity
         order.delivery_fee = delivery_fee_total
 
         db.add(order)
@@ -148,13 +141,14 @@ class OrderService:
         items: list[OrderItem] = []
         total = Decimal("0")
 
+        # Busca promoções ativas
+        active_promos = PromotionService.get_active_promotions(db)
+        promo_by_product = {p.product_id: p.discount_value for p in active_promos if p.product_id and not p.option_item_id}
+        promo_by_option = {p.option_item_id: p.discount_value for p in active_promos if p.option_item_id}
+
         for item_in in payload.items:
             product = ProductService.get_or_404(db, item_in.product_id)
-            active_price = (
-                product.promotional_price
-                if ProductService.is_promotion_active(product)
-                else product.price
-            )
+            active_price = promo_by_product.get(product.id, product.price) or Decimal("0")
 
             option_price_adjustment = Decimal("0")
             options_to_add = []
@@ -162,11 +156,7 @@ class OrderService:
                 for opt_in in item_in.selected_options:
                     opt_item = db.get(ProductOptionItem, opt_in.option_item_id)
                     if opt_item:
-                        active_opt_price = (
-                            opt_item.promotional_price
-                            if ProductService.is_promotion_active(opt_item)
-                            else opt_item.price_adjustment
-                        )
+                        active_opt_price = promo_by_option.get(opt_item.id, opt_item.price_adjustment) or Decimal("0")
                         option_price_adjustment += active_opt_price * opt_in.quantity
                         options_to_add.append(
                             OrderItemOption(
@@ -229,8 +219,25 @@ class OrderService:
     def list_orders(
         db: Session,
         status_filter: OrderStatus | None = None,
+        only_current_register: bool = False,
+        register_id: int | None = None,
     ) -> list[Order]:
         q = db.query(Order)
+
+        if register_id:
+            from app.services.cash_register_service import CashRegisterService
+            register = CashRegisterService.get_or_404(db, register_id)
+            q = q.filter(Order.created_at >= register.opened_at)
+            if register.closed_at:
+                q = q.filter(Order.created_at <= register.closed_at)
+        elif only_current_register:
+            from app.services.cash_register_service import CashRegisterService
+            current = CashRegisterService.get_current_open(db)
+            if current:
+                q = q.filter(Order.created_at >= current.opened_at)
+            else:
+                return []
+
         if status_filter:
             q = q.filter(Order.status == status_filter)
         return q.order_by(Order.created_at.desc()).all()

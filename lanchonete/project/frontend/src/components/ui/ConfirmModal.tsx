@@ -29,11 +29,10 @@ export function ConfirmModal({
     <Modal open={open} onClose={onClose} title={title}>
       <div className="space-y-6">
         <div className="flex items-start gap-4">
-          <div className={`p-3 rounded-2xl flex-shrink-0 ${
-            variant === "danger" ? "bg-red-50 text-red-500" : 
-            variant === "warning" ? "bg-amber-50 text-amber-500" : 
-            "bg-brand-50 text-brand-500"
-          }`}>
+          <div className={`p-3 rounded-2xl flex-shrink-0 ${variant === "danger" ? "bg-red-50 text-red-500" :
+              variant === "warning" ? "bg-amber-50 text-amber-500" :
+                "bg-brand-50 text-brand-500"
+            }`}>
             <AlertTriangle size={24} />
           </div>
           <div>
@@ -47,10 +46,10 @@ export function ConfirmModal({
           <Button variant="secondary" onClick={onClose} disabled={loading}>
             {cancelLabel}
           </Button>
-          <Button 
+          <Button
             variant={variant === "danger" ? "primary" : variant === "warning" ? "secondary" : "primary"}
             className={variant === "danger" ? "bg-red-500 hover:bg-red-600 border-red-500 text-white" : ""}
-            onClick={onConfirm} 
+            onClick={onConfirm}
             loading={loading}
           >
             {confirmLabel}

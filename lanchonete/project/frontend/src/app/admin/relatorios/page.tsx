@@ -166,7 +166,7 @@ export default function RelatoriosPage() {
           </div>
 
           {/* Segunda linha de cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <StatCard 
               icon={<Layers size={18} />} 
               label="Fechamentos" 
@@ -175,11 +175,11 @@ export default function RelatoriosPage() {
               tooltip="Número de vezes que o caixa foi aberto e fechado neste período."
             />
             <StatCard 
-              icon={<UtensilsCrossed size={18} />} 
-              label="Local/Retirada" 
-              value={String(summary.total_local + summary.total_retirada)} 
+              icon={<DollarSign size={18} />} 
+              label="Total Dinheiro" 
+              value={formatCurrency(summary.total_dinheiro)} 
               color="amber" 
-              tooltip="Soma de pedidos que não foram delivery."
+              tooltip="Total acumulado recebido em espécie (dinheiro)."
             />
             <StatCard 
               icon={<Smartphone size={18} />} 
@@ -189,11 +189,18 @@ export default function RelatoriosPage() {
               tooltip="Total acumulado recebido via PIX."
             />
             <StatCard 
-              icon={<DollarSign size={18} />} 
-              label="Total Dinheiro" 
-              value={formatCurrency(summary.total_dinheiro)} 
-              color="amber" 
-              tooltip="Total acumulado recebido em espécie (dinheiro)."
+              icon={<CreditCard size={18} />} 
+              label="Total Cartão" 
+              value={formatCurrency(summary.total_cartao)} 
+              color="blue" 
+              tooltip="Total acumulado recebido via Cartão de Crédito/Débito."
+            />
+            <StatCard 
+              icon={<UtensilsCrossed size={18} />} 
+              label="Local/Retirada" 
+              value={String(summary.total_local + summary.total_retirada)} 
+              color="violet" 
+              tooltip="Soma de pedidos que não foram delivery."
             />
           </div>
 

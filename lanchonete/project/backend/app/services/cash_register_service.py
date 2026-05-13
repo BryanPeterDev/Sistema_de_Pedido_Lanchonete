@@ -104,11 +104,32 @@ class CashRegisterService:
 
     @staticmethod
     def get_current_open(db: Session) -> CashRegister | None:
-        return (
+        register = (
             db.query(CashRegister)
             .filter(CashRegister.status == CashRegisterStatus.aberto)
             .first()
         )
+        if not register:
+            return None
+
+        # Calcula totais em tempo real para o caixa aberto
+        orders = (
+            db.query(Order)
+            .filter(Order.created_at >= register.opened_at)
+            .all()
+        )
+        totals = CashRegisterService._consolidate(orders)
+
+        # Injeta os valores no objeto (não persistido no banco até o fechamento)
+        register.total_revenue = totals["total_revenue"]
+        register.total_dinheiro = totals["total_dinheiro"]
+        register.total_pix = totals["total_pix"]
+        register.total_cartao = totals["total_cartao"]
+        register.total_orders = totals["total_orders"]
+        register.total_cancelled = totals["total_cancelled"]
+        register.total_delivery_fees = totals["total_delivery_fees"]
+
+        return register
 
     @staticmethod
     def get_last_closed(db: Session) -> CashRegister:
