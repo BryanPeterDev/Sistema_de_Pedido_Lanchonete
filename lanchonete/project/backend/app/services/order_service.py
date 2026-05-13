@@ -25,6 +25,13 @@ class OrderService:
         db: Session, payload: AttendantOrderCreate, created_by_id: int
     ) -> Order:
         """Cria pedido a partir do atendente/admin com dados do cliente inline."""
+        from app.services.cash_register_service import CashRegisterService
+        if not CashRegisterService.get_current_open(db):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Não é possível realizar pedidos com o caixa fechado. Por favor, abra o caixa primeiro."
+            )
+
         items: list[OrderItem] = []
         total = Decimal("0")
 

@@ -101,7 +101,7 @@ export default function MotoboySidebar({ onNavigate }: MotoboySidebarProps) {
           {!isCollapsed && (
             <div className="flex-1 min-w-0 animate-fade-in">
               <p className="text-[11px] font-bold text-white font-body truncate tracking-tight">{user?.name}</p>
-              <p className="text-[9px] text-surface-500 font-body uppercase tracking-tighter">{isMotoboy ? "Motoboy" : "Cozinha"}</p>
+              <p className="text-[9px] text-white font-body uppercase tracking-tighter">{isMotoboy ? "Motoboy" : "Cozinha"}</p>
             </div>
           )}
         </div>

@@ -89,7 +89,7 @@ export default function AtendenteSidebar() {
           {!isCollapsed && (
             <div className="flex-1 min-w-0 animate-fade-in">
               <p className="text-[11px] font-bold text-white font-body truncate tracking-tight">{user?.name}</p>
-              <p className="text-[9px] text-surface-500 font-body uppercase tracking-tighter">Atendente</p>
+              <p className="text-[9px] text-white font-body uppercase tracking-tighter">Atendente</p>
             </div>
           )}
         </div>

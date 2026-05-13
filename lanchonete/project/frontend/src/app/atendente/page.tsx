@@ -2,13 +2,13 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, Plus, Minus, Trash2, ShoppingBag, MapPin, Phone, User, StickyNote, AlertTriangle } from "lucide-react";
+import { Search, Plus, Minus, Trash2, ShoppingBag, MapPin, Phone, User, StickyNote, AlertTriangle, Lock } from "lucide-react";
 import { useProducts, useCategories } from "@/hooks/useProducts";
 import { useActivePromotions } from "@/hooks/usePromotions";
 import { useCreateOrder, useUpdateOrder, useOrder } from "@/hooks/useOrders";
 import { formatCurrency, cn, getImageUrl, getActivePrice, getPromotion } from "@/lib/utils";
 import { Spinner, Button, Modal } from "@/components/ui";
-import toast from "react-hot-toast";
+import { useCashRegisterCurrent } from "@/hooks/useCashRegister";
 import type { Product, OrderType, PaymentMethod, ProductOptionItem, ProductOptionGroup } from "@/types";
 
 interface LocalCartItem {
@@ -62,6 +62,9 @@ function AtendentePage() {
   const { data: promotions = [] } = useActivePromotions();
   const createOrder = useCreateOrder();
   const updateOrder = useUpdateOrder();
+  const { data: currentRegister, isLoading: loadingRegister } = useCashRegisterCurrent();
+  
+  const isRegisterClosed = !loadingRegister && !currentRegister && !editId;
 
   useEffect(() => {
     if (orderToEdit) {
@@ -383,6 +386,18 @@ function AtendentePage() {
         </div>
 
         <div className="flex-1 overflow-auto p-5 space-y-5">
+          {isRegisterClosed && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 animate-fade-up">
+              <div className="flex items-center gap-2 text-red-700 font-bold mb-1">
+                <Lock size={16} />
+                Caixa Fechado
+              </div>
+              <p className="text-xs text-red-600 font-body">
+                Você precisa abrir o caixa para poder realizar novos pedidos.
+              </p>
+            </div>
+          )}
+
           {editId && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 animate-fade-up">
               <label className="flex items-center gap-2 text-xs font-semibold text-amber-800 font-body mb-2 uppercase tracking-wide">
@@ -592,8 +607,14 @@ function AtendentePage() {
             <span className="font-body font-semibold text-surface-800">Total</span>
             <span className="font-display text-2xl text-surface-900">{formatCurrency(total)}</span>
           </div>
-          <Button onClick={handleSubmit} loading={createOrder.isPending || updateOrder.isPending} disabled={cart.length === 0 || !customerName.trim()} size="lg" className="w-full">
-            {editId ? "Salvar Alterações" : "Finalizar Pedido"}
+          <Button 
+            onClick={handleSubmit} 
+            loading={createOrder.isPending || updateOrder.isPending} 
+            disabled={cart.length === 0 || !customerName.trim() || isRegisterClosed} 
+            size="lg" 
+            className="w-full"
+          >
+            {isRegisterClosed ? "Caixa Fechado" : (editId ? "Salvar Alterações" : "Finalizar Pedido")}
           </Button>
         </div>
       </div>
